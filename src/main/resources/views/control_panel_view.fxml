@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+
+<BorderPane xmlns:fx="http://javafx.com/fxml" fx:controller="com.app.subly.controller.ControlPanelController">
+
+    <!-- Top toolbar with toggle -->
+    <top>
+        <HBox spacing="10">
+            <padding>
+                <Insets top="10" right="10" bottom="10" left="10"/>
+            </padding>
+            <ToggleButton fx:id="toggleShowScreenBtn" text="Show Screen ON/OFF"/>
+            <Button text="⚙ Settings" fx:id="settingsButton"/>
+        </HBox>
+    </top>
+
+    <!-- Center: grid with subtitle list -->
+    <center>
+        <VBox spacing="10">
+            <padding>
+                <Insets top="10" right="10" bottom="10" left="10"/>
+            </padding>
+            <Label text="Current Subtitle:" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+            <Label fx:id="currentSubtitleLabel" text="(none)" style="-fx-font-size: 14px; -fx-text-fill: blue;"/>
+
+            <!-- Grid/Table for subtitles -->
+            <TableView fx:id="subtitleTable" prefHeight="300">
+                <columns>
+                    <TableColumn fx:id="indexColumn" text="Index" prefWidth="80"/>
+                    <TableColumn fx:id="subtitleColumn" text="Subtitle" prefWidth="400"/>
+                </columns>
+            </TableView>
+        </VBox>
+    </center>
+
+    <!-- Bottom controls -->
+    <bottom>
+        <HBox alignment="center" spacing="20">
+            <padding>
+                <Insets top="10" right="10" bottom="10" left="10"/>
+            </padding>
+            <Button fx:id="prevBtn" text="⏮ Prev"/>
+            <Button fx:id="nextBtn" text="Next ⏭"/>
+        </HBox>
+    </bottom>
+
+</BorderPane>
+

@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ColorPicker?>
+<?import javafx.scene.control.RadioButton?>
+<?import javafx.scene.control.TitledPane?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox alignment="TOP_CENTER" spacing="15"
+      xmlns="http://javafx.com/javafx/24.0.1"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.app.subly.controller.SettingsController">
+
+    <padding>
+        <Insets top="10" right="10" bottom="10" left="10"/>
+    </padding>
+
+    <!-- Background Settings -->
+    <TitledPane text="Background" animated="false" expanded="true">
+        <content>
+            <VBox spacing="10" fillWidth="true" prefWidth="300">
+                <!-- ToggleGroup -->
+                <RadioButton fx:id="transparentOption" text="Transparent" toggleGroup="$bgGroup"/>
+                <VBox spacing="5">
+                    <RadioButton fx:id="colorOption" text="Color:" toggleGroup="$bgGroup"/>
+                    <ColorPicker fx:id="colorPicker"/>
+                </VBox>
+            </VBox>
+        </content>
+    </TitledPane>
+
+    <!-- Text Settings -->
+    <TitledPane text="Text" animated="false" expanded="true">
+        <content>
+            <VBox spacing="10" fillWidth="true" prefWidth="300">
+                <!-- Add text size/color controls later -->
+            </VBox>
+        </content>
+    </TitledPane>
+
+    <Button fx:id="applyButton" text="Apply"/>
+
+</VBox>
