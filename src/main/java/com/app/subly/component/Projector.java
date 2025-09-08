@@ -1,7 +1,7 @@
 package com.app.subly.component;
 
 import com.app.subly.common.SublyApplicationStage;
-import com.app.subly.storage.AppSettings;
+import com.app.subly.storage.SublySettings;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
@@ -88,7 +88,7 @@ public class Projector {
         (stage.getScene().getRoot()).setStyle("-fx-background-color: " + rgb + ";");
     }
 
-    public void applySettings(AppSettings settings) {
+    public void applySettings(SublySettings settings) {
         if (settings.isProjectorTransparent()) {
             setTransparentBackground();
         } else {

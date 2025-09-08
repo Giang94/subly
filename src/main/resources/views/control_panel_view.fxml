@@ -8,13 +8,28 @@
 
     <!-- Top toolbar with toggle -->
     <top>
-        <HBox spacing="10">
-            <padding>
-                <Insets top="10" right="10" bottom="10" left="10"/>
-            </padding>
-            <ToggleButton fx:id="toggleShowScreenBtn" text="Show Screen ON/OFF"/>
-            <Button text="⚙ Settings" fx:id="settingsButton"/>
-        </HBox>
+        <VBox>
+            <MenuBar fx:id="menuBar">
+                <Menu text="File">
+                    <MenuItem fx:id="openMenuItem" text="Open..."/>
+                    <MenuItem fx:id="saveMenuItem" text="Save"/>
+                    <SeparatorMenuItem/>
+                    <MenuItem fx:id="exitMenuItem" text="Exit"/>
+                </Menu>
+                <Menu text="Edit">
+                    <MenuItem fx:id="undoMenuItem" text="Undo"/>
+                    <MenuItem fx:id="redoMenuItem" text="Redo"/>
+                </Menu>
+            </MenuBar>
+            <HBox spacing="10">
+                <padding>
+                    <Insets top="10" right="10" bottom="10" left="10"/>
+                </padding>
+                <Button text="Open..." fx:id="openFileButton"/>
+                <Button text="⚙ Settings" fx:id="settingsButton"/>
+                <ToggleButton fx:id="toggleShowScreenButton" text="Show Screen ON/OFF"/>
+            </HBox>
+        </VBox>
     </top>
 
     <!-- Center: grid with subtitle list -->
@@ -30,7 +45,8 @@
             <TableView fx:id="subtitleTable" prefHeight="300">
                 <columns>
                     <TableColumn fx:id="indexColumn" text="Index" prefWidth="80"/>
-                    <TableColumn fx:id="subtitleColumn" text="Subtitle" prefWidth="400"/>
+                    <TableColumn fx:id="primaryTextColumn" text="Text" prefWidth="400"/>
+                    <TableColumn fx:id="secondaryTextColumn" text="Note" prefWidth="400"/>
                 </columns>
             </TableView>
         </VBox>
@@ -42,8 +58,8 @@
             <padding>
                 <Insets top="10" right="10" bottom="10" left="10"/>
             </padding>
-            <Button fx:id="prevBtn" text="⏮ Prev"/>
-            <Button fx:id="nextBtn" text="Next ⏭"/>
+            <Button fx:id="prevButton" text="⏮ Prev"/>
+            <Button fx:id="nextButton" text="Next ⏭"/>
         </HBox>
     </bottom>
 

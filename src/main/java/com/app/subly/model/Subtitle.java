@@ -2,18 +2,36 @@ package com.app.subly.model;
 
 public class Subtitle {
     private Integer id;
-    private String text;
+    private String primaryText;
+    private String secondaryText;
 
-    public Subtitle(Integer id, String text) {
+    public Subtitle(Integer id, String primaryText, String secondaryText) {
         this.id = id;
-        this.text = text;
+        this.primaryText = primaryText;
+        this.secondaryText = secondaryText;
     }
 
     public Integer getId() {
         return id;
     }
 
-    public String getText() {
-        return text;
+    public void setId(Integer id) {
+        this.id = id;
+    }
+
+    public String getPrimaryText() {
+        return primaryText;
+    }
+
+    public void setPrimaryText(String primaryText) {
+        this.primaryText = primaryText;
+    }
+
+    public String getSecondaryText() {
+        return secondaryText;
+    }
+
+    public void setSecondaryText(String secondaryText) {
+        this.secondaryText = secondaryText;
     }
 }
