@@ -77,7 +77,7 @@ public class Projector {
 
     public void setTransparentBackground() {
         stage.getScene().getRoot().setStyle("-fx-background-color: transparent;");
-        stage.getScene().setFill(Color.rgb(0, 0, 0, 0.05));
+        stage.getScene().setFill(Color.rgb(0, 0, 0, 0.02));
     }
 
     public void setBackgroundColor(Color color) {

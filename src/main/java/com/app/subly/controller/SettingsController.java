@@ -1,12 +1,17 @@
 package com.app.subly.controller;
 
 import com.app.subly.component.Projector;
+import com.app.subly.storage.AppSettings;
+import com.app.subly.storage.AppSettingsManager;
+import com.app.subly.utils.ColorConvertUtils;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.ColorPicker;
 import javafx.scene.control.RadioButton;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.paint.Color;
+
+import java.io.IOException;
 
 public class SettingsController {
 
@@ -28,13 +33,19 @@ public class SettingsController {
     }
 
     @FXML
-    private void initialize() {
-        // Default selection
-        transparentOption.setSelected(true);
-
+    private void initialize() throws IOException {
+        AppSettings appSettings = AppSettingsManager.load();
         // Disable color picker unless "Color" option is selected
         colorPicker.disableProperty().bind(colorOption.selectedProperty().not());
-
+        colorPicker.setValue(ColorConvertUtils.toJavaFxColor(appSettings.getProjectorColor()));
+        // Default selection
+        if (appSettings.isProjectorTransparent()) {
+            transparentOption.setSelected(true);
+            colorOption.setSelected(false);
+        } else {
+            transparentOption.setSelected(false);
+            colorOption.setSelected(true);
+        }
         bgGroup = new ToggleGroup();
         transparentOption.setToggleGroup(bgGroup);
         colorOption.setToggleGroup(bgGroup);
@@ -44,9 +55,17 @@ public class SettingsController {
 
             if (transparentOption.isSelected()) {
                 projector.setTransparentBackground();
+                appSettings.setProjectorTransparent(true);
             } else if (colorOption.isSelected()) {
                 Color chosen = colorPicker.getValue();
                 projector.setBackgroundColor(chosen);
+                appSettings.setProjectorTransparent(false);
+                appSettings.setProjectorColor(ColorConvertUtils.toHexString(chosen));
+            }
+            try {
+                AppSettingsManager.save(appSettings);
+            } catch (IOException ex) {
+                throw new RuntimeException(ex);
             }
         });
     }
