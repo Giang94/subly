@@ -2,7 +2,7 @@ package com.app.subly.storage;
 
 import java.io.Serializable;
 
-public class AppSettings implements Serializable {
+public class SublySettings implements Serializable {
     private boolean projectorTransparent = true; // default
     private String projectorColor = "33cc33";   // default black
     private String subtitleColor = "FFFF00";    // default yellow

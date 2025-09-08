@@ -1,6 +1,7 @@
 package com.app.subly.controller;
 
 import com.app.subly.component.Projector;
+import com.app.subly.storage.SublySettings;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.ColorPicker;
@@ -48,6 +49,9 @@ public class SettingsController {
                 Color chosen = colorPicker.getValue();
                 projector.setBackgroundColor(chosen);
             }
+
+            SublySettings sublySettings = new SublySettings();
+            sublySettings.setProjectorTransparent(transparentOption.isSelected());
         });
     }
 }

@@ -13,11 +13,11 @@ public class AppSettingsManager {
     private static final String DEFAULT_SUBTITLE_COLOR = "ffff00";
     private static final double DEFAULT_SUBTITLE_FONT_SIZE = 24.0;
 
-    public static AppSettings load() throws IOException {
+    public static SublySettings load() throws IOException {
         Properties properties = new Properties();
         File file = new File(SETTINGS_FILE);
 
-        AppSettings settings = new AppSettings();
+        SublySettings settings = new SublySettings();
 
         if (file.exists()) {
             // Load existing properties
@@ -50,7 +50,7 @@ public class AppSettingsManager {
         return settings;
     }
 
-    public static void save(AppSettings settings) throws IOException {
+    public static void save(SublySettings settings) throws IOException {
         Properties properties = new Properties();
         properties.setProperty("projector.transparent", String.valueOf(settings.isProjectorTransparent()));
         properties.setProperty("projector.color", settings.getProjectorColor());

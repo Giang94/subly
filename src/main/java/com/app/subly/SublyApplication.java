@@ -2,7 +2,7 @@ package com.app.subly;
 
 import com.app.subly.component.ControlPanel;
 import com.app.subly.component.Projector;
-import com.app.subly.storage.AppSettings;
+import com.app.subly.storage.SublySettings;
 import com.app.subly.storage.AppSettingsManager;
 import com.app.subly.utils.AppIconUtils;
 import javafx.application.Application;
@@ -14,7 +14,7 @@ public class SublyApplication extends Application {
 
     private Projector projector;
     private ControlPanel controlPanel;
-    private AppSettings settings;
+    private SublySettings settings;
 
     @Override
     public void start(Stage primaryStage) throws IOException {
