@@ -1,6 +1,8 @@
 module com.app.subly {
     requires javafx.controls;
     requires javafx.fxml;
+    requires static lombok;
+    requires com.fasterxml.jackson.databind;
     requires java.desktop;
 
 
@@ -11,6 +13,6 @@ module com.app.subly {
     exports com.app.subly.common;
     exports com.app.subly.controller;
     exports com.app.subly.model;
-    exports com.app.subly.storage;
+    exports com.app.subly.persistence;
     exports com.app.subly.utils;
 }

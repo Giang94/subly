@@ -1,10 +1,9 @@
 package com.app.subly.controller;
 
 import com.app.subly.component.Projector;
-import com.app.subly.storage.AppSettings;
-import com.app.subly.storage.AppSettingsManager;
+import com.app.subly.persistence.AppSettingsManager;
 import com.app.subly.utils.ColorConvertUtils;
-import com.app.subly.storage.SublySettings;
+import com.app.subly.model.SublySettings;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.ColorPicker;
@@ -35,12 +34,12 @@ public class SettingsController {
 
     @FXML
     private void initialize() throws IOException {
-        AppSettings appSettings = AppSettingsManager.load();
+        SublySettings sublySettings = AppSettingsManager.load();
         // Disable color picker unless "Color" option is selected
         colorPicker.disableProperty().bind(colorOption.selectedProperty().not());
-        colorPicker.setValue(ColorConvertUtils.toJavaFxColor(appSettings.getProjectorColor()));
+        colorPicker.setValue(ColorConvertUtils.toJavaFxColor(sublySettings.getProjectorColor()));
         // Default selection
-        if (appSettings.isProjectorTransparent()) {
+        if (sublySettings.isProjectorTransparent()) {
             transparentOption.setSelected(true);
             colorOption.setSelected(false);
         } else {
@@ -56,21 +55,18 @@ public class SettingsController {
 
             if (transparentOption.isSelected()) {
                 projector.setTransparentBackground();
-                appSettings.setProjectorTransparent(true);
+                sublySettings.setProjectorTransparent(true);
             } else if (colorOption.isSelected()) {
                 Color chosen = colorPicker.getValue();
                 projector.setBackgroundColor(chosen);
-                appSettings.setProjectorTransparent(false);
-                appSettings.setProjectorColor(ColorConvertUtils.toHexString(chosen));
+                sublySettings.setProjectorTransparent(false);
+                sublySettings.setProjectorColor(ColorConvertUtils.toHexString(chosen));
             }
             try {
-                AppSettingsManager.save(appSettings);
+                AppSettingsManager.save(sublySettings);
             } catch (IOException ex) {
                 throw new RuntimeException(ex);
             }
-
-            SublySettings sublySettings = new SublySettings();
-            sublySettings.setProjectorTransparent(transparentOption.isSelected());
         });
     }
 }

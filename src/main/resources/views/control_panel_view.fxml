@@ -10,23 +10,19 @@
     <top>
         <VBox>
             <MenuBar fx:id="menuBar">
-                <Menu text="File">
-                    <MenuItem fx:id="openMenuItem" text="Open..."/>
-                    <MenuItem fx:id="saveMenuItem" text="Save"/>
+                <Menu text="File" >
+                    <MenuItem fx:id="openMenuItem" text="📂 Open..."/>
+                    <MenuItem fx:id="saveMenuItem" text="💾 Save"/>
+                    <SeparatorMenuItem/>
+                    <MenuItem fx:id="settingsMenuItem" text="⚙ Settings"/>
                     <SeparatorMenuItem/>
                     <MenuItem fx:id="exitMenuItem" text="Exit"/>
-                </Menu>
-                <Menu text="Edit">
-                    <MenuItem fx:id="undoMenuItem" text="Undo"/>
-                    <MenuItem fx:id="redoMenuItem" text="Redo"/>
                 </Menu>
             </MenuBar>
             <HBox spacing="10">
                 <padding>
                     <Insets top="10" right="10" bottom="10" left="10"/>
                 </padding>
-                <Button text="Open..." fx:id="openFileButton"/>
-                <Button text="⚙ Settings" fx:id="settingsButton"/>
                 <ToggleButton fx:id="toggleShowScreenButton" text="Show Screen ON/OFF"/>
             </HBox>
         </VBox>

@@ -1,12 +1,14 @@
 package com.app.subly.component;
 
 import com.app.subly.common.SublyApplicationStage;
-import com.app.subly.storage.SublySettings;
+import com.app.subly.model.SublySettings;
+import javafx.geometry.Pos;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
+import javafx.scene.text.TextAlignment;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 
@@ -16,12 +18,14 @@ public class Projector {
 
     public Projector() {
         stage = new SublyApplicationStage();
-        stage.setTitle("Show Screen");
         stage.initStyle(StageStyle.TRANSPARENT);
 
         label = new Label();
+        label.setAlignment(Pos.CENTER);
+        label.setTextAlignment(TextAlignment.CENTER);
 
         StackPane layout = new StackPane(label);
+        layout.setAlignment(Pos.CENTER);
         Scene scene = new Scene(layout, 600, 400);
         stage.setScene(scene);
 
@@ -29,7 +33,7 @@ public class Projector {
     }
 
     public void setText(String text) {
-        label.setText(text);
+        label.setText(text.replace("\\n", "\n"));
     }
 
     public void show() {
