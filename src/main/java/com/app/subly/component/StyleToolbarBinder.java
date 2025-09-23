@@ -19,8 +19,6 @@ public class StyleToolbarBinder {
     private final Button fontDown;
     private final Button fontUp;
     private final ColorPicker textColorPicker;
-    private final ColorPicker bgColorPicker;
-    private final CheckBox bgTransparentCheckBox;
 
     private final Supplier<Integer> currentFontSize;
     private final ApplyProjector applyProjector;
@@ -31,7 +29,7 @@ public class StyleToolbarBinder {
 
     public StyleToolbarBinder(int minFont, int maxFont,
                               TextField fontSizeField, Button fontDown, Button fontUp,
-                              ColorPicker textColorPicker, ColorPicker bgColorPicker, CheckBox bgTransparentCheckBox,
+                              ColorPicker textColorPicker,
                               Supplier<Integer> currentFontSize,
                               ApplyProjector applyProjector,
                               Runnable markDirty) {
@@ -41,8 +39,6 @@ public class StyleToolbarBinder {
         this.fontDown = fontDown;
         this.fontUp = fontUp;
         this.textColorPicker = textColorPicker;
-        this.bgColorPicker = bgColorPicker;
-        this.bgTransparentCheckBox = bgTransparentCheckBox;
         this.currentFontSize = currentFontSize;
         this.applyProjector = applyProjector;
         this.markDirty = markDirty;
@@ -60,14 +56,6 @@ public class StyleToolbarBinder {
         if (textColorPicker != null) {
             textColorPicker.setValue(ColorConvertUtils.toJavaFxColor(s.getSubtitleColor()));
         }
-        if (bgColorPicker != null) {
-            Color bg = ColorConvertUtils.toJavaFxColor(s.getProjectorColor());
-            if (s.isProjectorTransparent()) bg = new Color(bg.getRed(), bg.getGreen(), bg.getBlue(), 0.0);
-            bgColorPicker.setValue(bg);
-        }
-        if (bgTransparentCheckBox != null) {
-            bgTransparentCheckBox.setSelected(s.isProjectorTransparent());
-        }
         if (fontSizeField != null) {
             int fs = clamp(s.getSubtitleFontSize());
             fontSizeField.setText(String.valueOf(fs));
@@ -79,7 +67,8 @@ public class StyleToolbarBinder {
     private void initControls() {
         if (fontSizeField != null) {
             TextFormatter<Integer> formatter = new TextFormatter<>(
-                    new IntegerStringConverter(), clamp((currentFontSize != null ? currentFontSize.get() : minFont)),
+                    new IntegerStringConverter(),
+                    clamp((currentFontSize != null ? currentFontSize.get() : minFont)),
                     change -> change.getControlNewText().matches("\\d{0,3}") ? change : null
             );
             fontSizeField.setTextFormatter(formatter);
@@ -91,18 +80,8 @@ public class StyleToolbarBinder {
         if (fontDown != null) fontDown.setOnAction(e -> adjustFont(-1));
         if (fontUp != null) fontUp.setOnAction(e -> adjustFont(1));
 
-        if (bgTransparentCheckBox != null && bgColorPicker != null) {
-            bgColorPicker.disableProperty().bind(bgTransparentCheckBox.selectedProperty());
-        }
-
         if (textColorPicker != null) {
             textColorPicker.valueProperty().addListener((obs, ov, nv) -> onAnyStyleChanged());
-        }
-        if (bgColorPicker != null) {
-            bgColorPicker.valueProperty().addListener((obs, ov, nv) -> onAnyStyleChanged());
-        }
-        if (bgTransparentCheckBox != null) {
-            bgTransparentCheckBox.selectedProperty().addListener((obs, ov, nv) -> onAnyStyleChanged());
         }
     }
 
@@ -110,18 +89,14 @@ public class StyleToolbarBinder {
         if (session == null) return;
         int size = currentFontSize != null ? clamp(currentFontSize.get()) : minFont;
         Color text = textColorPicker != null ? textColorPicker.getValue() : null;
-        Color bg = bgColorPicker != null ? bgColorPicker.getValue() : null;
-        boolean transparent = bgTransparentCheckBox != null && bgTransparentCheckBox.isSelected();
 
         session.update(s -> {
             s.setSubtitleFontSize(size);
             if (text != null) s.setSubtitleColor(ColorConvertUtils.toHexString(text));
-            s.setProjectorTransparent(transparent);
-            if (!transparent && bg != null) s.setProjectorColor(ColorConvertUtils.toHexString(bg));
         });
 
         applyCurrentToProjector();
-        markDirty.run();
+        if (markDirty != null) markDirty.run();
     }
 
     private void commitFontSize() {
@@ -142,9 +117,7 @@ public class StyleToolbarBinder {
         if (session == null) return;
         int size = clamp(session.getSettings().getSubtitleFontSize());
         Color text = textColorPicker != null ? textColorPicker.getValue() : null;
-        boolean transparent = bgTransparentCheckBox != null && bgTransparentCheckBox.isSelected();
-        Color bg = bgColorPicker != null ? bgColorPicker.getValue() : null;
-        if (applyProjector != null) applyProjector.apply(size, text, transparent, bg);
+        if (applyProjector != null) applyProjector.apply(size, text);
     }
 
     private int clamp(int v) {
@@ -153,6 +126,6 @@ public class StyleToolbarBinder {
 
     @FunctionalInterface
     public interface ApplyProjector {
-        void apply(int size, Color textColor, boolean transparent, Color bgColor);
+        void apply(int size, Color textColor);
     }
 }

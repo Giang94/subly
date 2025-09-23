@@ -11,10 +11,20 @@ import java.io.Serializable;
 @NoArgsConstructor
 public class SublySettings implements Serializable {
 
+    private BackgroundType backgroundType = BackgroundType.TRANSPARENT; // default
     private boolean projectorTransparent = true; // default
     private String projectorColor = "33cc33";   // default black
     private String subtitleColor = "FFFF00";    // default yellow
     private Integer subtitleFontSize = 24;        // default size
+    private String projectorImageUri;
+
+    public String getProjectorImageUri() {
+        return projectorImageUri;
+    }
+
+    public void setProjectorImageUri(String projectorImageUri) {
+        this.projectorImageUri = projectorImageUri;
+    }
 
     public String getProjectorColor() {
         return tidyUpColorCode(projectorColor);
@@ -37,5 +47,29 @@ public class SublySettings implements Serializable {
             return "#" + colorCode;
         }
         return colorCode;
+    }
+
+    public BackgroundType getBackgroundType() {
+        return backgroundType;
+    }
+
+    public void setBackgroundType(BackgroundType backgroundType) {
+        this.backgroundType = backgroundType;
+    }
+
+    public boolean isProjectorTransparent() {
+        return projectorTransparent;
+    }
+
+    public void setProjectorTransparent(boolean projectorTransparent) {
+        this.projectorTransparent = projectorTransparent;
+    }
+
+    public Integer getSubtitleFontSize() {
+        return subtitleFontSize;
+    }
+
+    public void setSubtitleFontSize(Integer subtitleFontSize) {
+        this.subtitleFontSize = subtitleFontSize;
     }
 }

@@ -70,9 +70,35 @@
                 <Label text="Text color"/>
                 <ColorPicker fx:id="textColorPicker"/>
 
+                <Separator orientation="VERTICAL" prefHeight="24"/>
+
                 <Label text="Background"/>
-                <CheckBox fx:id="bgTransparentCheckBox" text="Transparent"/>
-                <ColorPicker fx:id="bgColorPicker"/>
+                <fx:define>
+                    <ToggleGroup fx:id="bgToggleGroup"/>
+                </fx:define>
+
+                <RadioButton fx:id="bgTransparentRadio"
+                             text="Transparent"
+                             toggleGroup="$bgToggleGroup"
+                             selected="true"/>
+
+                <RadioButton fx:id="bgColorRadio"
+                             text="Color"
+                             toggleGroup="$bgToggleGroup"/>
+                <ColorPicker fx:id="bgColorPicker" disable="true"/>
+
+                <RadioButton fx:id="bgImageRadio"
+                             text="Image"
+                             toggleGroup="$bgToggleGroup"/>
+                <Button fx:id="chooseImageButton"
+                        text="Choose..."
+                        onAction="#onChooseImage"
+                        disable="true"/>
+                <TextField fx:id="imagePathField"
+                           promptText="No image selected"
+                           editable="false"
+                           prefWidth="220"
+                           disable="true"/>
             </HBox>
 
             <!-- Grid/Table for subtitles -->

@@ -3,6 +3,7 @@ package com.app.subly.controller;
 import com.app.subly.SublyApplication;
 import com.app.subly.component.SublyApplicationStage;
 import com.app.subly.component.*;
+import com.app.subly.model.BackgroundType;
 import com.app.subly.model.SublyProjectFile;
 import com.app.subly.model.SublySettings;
 import com.app.subly.model.Subtitle;
@@ -10,8 +11,11 @@ import com.app.subly.persistence.SublyProjectFileManager;
 import com.app.subly.project.SublyProjectSession;
 import com.app.subly.utils.ColorConvertUtils;
 import javafx.application.Platform;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
@@ -20,12 +24,14 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.layout.BackgroundFill;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextAlignment;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import javafx.stage.Window;
 
 import java.io.File;
 import java.io.IOException;
@@ -67,6 +73,7 @@ public class ControlPanelController {
     private Button nextButton;
 
     // Toolbar
+    // Text settings
     @FXML
     private TextField fontSizeField;
     @FXML
@@ -75,10 +82,21 @@ public class ControlPanelController {
     private Button fontSizeUpButton;
     @FXML
     private ColorPicker textColorPicker;
+    // Background controls
+    @FXML
+    private RadioButton bgTransparentRadio;
+    @FXML
+    private RadioButton bgColorRadio;
+    @FXML
+    private RadioButton bgImageRadio;
+    @FXML
+    private ToggleGroup bgToggleGroup;
     @FXML
     private ColorPicker bgColorPicker;
     @FXML
-    private CheckBox bgTransparentCheckBox;
+    private Button chooseImageButton;
+    @FXML
+    private TextField imagePathField;
 
     // Menu
     @FXML
@@ -95,8 +113,6 @@ public class ControlPanelController {
     private MenuItem exitMenuItem;
 
     @FXML
-    private Menu editMenu;
-    @FXML
     private MenuItem undoMenuItem;
     @FXML
     private MenuItem redoMenuItem;
@@ -109,6 +125,7 @@ public class ControlPanelController {
         setupMenuBarBasics();
         toggleButton();
         setupEditMenu();
+        backgroundControlsSetup();
 
         // Demo data + ensure trailing blank row
         ObservableList<Subtitle> data = FXCollections.observableArrayList(
@@ -154,6 +171,66 @@ public class ControlPanelController {
         }
     }
 
+    private void backgroundControlsSetup() {
+        if (bgToggleGroup == null) {
+            bgToggleGroup = new ToggleGroup();
+            bgTransparentRadio.setToggleGroup(bgToggleGroup);
+            bgColorRadio.setToggleGroup(bgToggleGroup);
+            bgImageRadio.setToggleGroup(bgToggleGroup);
+        }
+
+        // Enable/disable controls based on selected background type
+        bgColorPicker.disableProperty().bind(bgColorRadio.selectedProperty().not());
+        chooseImageButton.disableProperty().bind(bgImageRadio.selectedProperty().not());
+        imagePathField.disableProperty().bind(bgImageRadio.selectedProperty().not());
+    }
+
+    @FXML
+    public void onChooseImage(ActionEvent event) {
+        Window owner = (menuBar != null && menuBar.getScene() != null) ? menuBar.getScene().getWindow() : null;
+
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle("Choose Background Image");
+        chooser.getExtensionFilters().addAll(
+                new FileChooser.ExtensionFilter("Image Files", "*.png", "*.jpg", "*.jpeg", "*.bmp", "*.gif"),
+                new FileChooser.ExtensionFilter("All Files", "*.*")
+        );
+
+        File file = chooser.showOpenDialog(owner);
+        if (file != null) {
+            // Store as URI or absolute path as needed by your model
+            imagePathField.setText(file.toURI().toString());
+            applyBackgroundChange();
+        }
+    }
+
+    private void applyBackgroundChange() {
+        if (session == null) return;
+
+        session.update(s -> {
+            if (bgTransparentRadio != null && bgTransparentRadio.isSelected()) {
+                s.setBackgroundType(BackgroundType.TRANSPARENT);
+                s.setProjectorImageUri(null); // clear any previous image
+            } else if (bgColorRadio != null && bgColorRadio.isSelected()) {
+                s.setBackgroundType(BackgroundType.SOLID_COLOR);
+                Color c = (bgColorPicker != null && bgColorPicker.getValue() != null)
+                        ? bgColorPicker.getValue() : Color.BLACK;
+                s.setProjectorColor(ColorConvertUtils.toHexString(c));
+                s.setProjectorImageUri(null); // clear any previous image
+            } else if (bgImageRadio != null && bgImageRadio.isSelected()) {
+                s.setBackgroundType(BackgroundType.IMAGE);
+                String uri = imagePathField != null ? imagePathField.getText() : null;
+                s.setProjectorImageUri(uri);
+            }
+        });
+
+        if (projector != null) {
+            projector.applySettings(session.getSettings());
+        }
+        // applyCurrentLabelBackground(session.getSettings());
+        markDirty();
+    }
+
     private void toggleButton() {
         if (toggleShowScreenButton.isSelected()) {
             toggleShowScreenButton.setText("Close Show Screen");
@@ -174,6 +251,7 @@ public class ControlPanelController {
                 if (selected != null) {
                     projector.setText(selected);
                 }
+                applyBackgroundChange();
             } else {
                 if (projector != null) {
                     projector.hide();
@@ -212,17 +290,46 @@ public class ControlPanelController {
 
     public void setSession(SublyProjectSession session) {
         this.session = session;
+
         if (styleBinder == null) {
+            // Pass null for the old checkbox (now replaced by radio buttons)
             styleBinder = new StyleToolbarBinder(
                     MIN_FONT_SIZE, MAX_FONT_SIZE,
                     fontSizeField, fontSizeDownButton, fontSizeUpButton,
-                    textColorPicker, bgColorPicker, bgTransparentCheckBox,
+                    textColorPicker,
                     this::currentFontSize,
                     this::applySettingsToProjector,
                     this::markDirty
             );
         }
+
+        // Reflect current settings into the radio group and color picker
+        SublySettings settings = (session != null) ? session.getSettings() : null;
+        if (settings != null) {
+            if (settings.isProjectorTransparent()) {
+                if (bgTransparentRadio != null) bgTransparentRadio.setSelected(true);
+            } else {
+                if (bgColorRadio != null) bgColorRadio.setSelected(true);
+                if (bgColorPicker != null && settings.getProjectorColor() != null) {
+                    bgColorPicker.setValue(ColorConvertUtils.toJavaFxColor(settings.getProjectorColor()));
+                }
+            }
+        }
+
+        // Propagate radio/color changes to session/projector
+        if (bgToggleGroup != null) {
+            bgToggleGroup.selectedToggleProperty().addListener((obs, o, n) -> applyBackgroundChange());
+        }
+        if (bgColorPicker != null) {
+            bgColorPicker.valueProperty().addListener((obs, o, n) -> {
+                if (bgColorRadio != null && bgColorRadio.isSelected()) applyBackgroundChange();
+            });
+        }
+
         styleBinder.rebind(session, projector);
+
+        // Apply initial background based on the current selection
+        applyBackgroundChange();
     }
 
     private void setupTableBasics() {
@@ -468,7 +575,6 @@ public class ControlPanelController {
                 // Reflect in UI
                 if (fontSizeField != null) fontSizeField.setText(String.valueOf(sizeToApply));
                 if (textColorPicker != null) textColorPicker.setValue(textFx);
-                if (bgTransparentCheckBox != null) bgTransparentCheckBox.setSelected(transparent);
                 if (bgColorPicker != null) {
                     Color pickerBg = transparent
                             ? new Color(bgFx.getRed(), bgFx.getGreen(), bgFx.getBlue(), 0.0)
@@ -531,7 +637,6 @@ public class ControlPanelController {
         }
         trailingRowPolicy.ensureTrailingBlankRow(subtitleTable);
     }
-
 
     public void refreshActions() {
         if (session == null) {
@@ -606,25 +711,6 @@ public class ControlPanelController {
         return success;
     }
 
-    // ADD: simple unsaved-changes confirmation
-    private boolean confirmDiscardIfDirty(String message) {
-        if (!dirty.get()) return true;
-        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        alert.setTitle("Unsaved changes");
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        ButtonType save = new ButtonType("Save");
-        ButtonType dont = new ButtonType("Don't Save");
-        ButtonType cancel = ButtonType.CANCEL;
-        alert.getButtonTypes().setAll(save, dont, cancel);
-        ButtonType choice = alert.showAndWait().orElse(cancel);
-        if (choice == save) {
-            saveProject(); // or your existing save-with-prompt flow
-            return !dirty.get(); // proceed only if save cleared dirty
-        }
-        return choice == dont;
-    }
-
     private void configureCurrentSubtitleLabel() {
         if (currentSubtitleLabel == null) return;
         currentSubtitleLabel.setWrapText(false);
@@ -666,14 +752,50 @@ public class ControlPanelController {
         });
     }
 
-    private void applySettingsToProjector(int size, Color textColor, boolean transparent, Color bgColor) {
+    private void applySettingsToProjector(int size, Color textColor) {
         if (projector == null) return;
         projector.setFontSize(size);
         projector.applySettings(session != null ? session.getSettings() : null);
     }
 
+    private void applyCurrentLabelBackground(SublySettings s) {
+        if (currentSubtitleLabel == null || s == null) return;
+
+        String style;
+        switch (s.getBackgroundType()) {
+            case TRANSPARENT -> {
+                style = "-fx-background-color: transparent;";
+            }
+            case SOLID_COLOR -> {
+                Color c = ColorConvertUtils.toJavaFxColor(s.getProjectorColor());
+                int r = (int) Math.round(c.getRed() * 255);
+                int g = (int) Math.round(c.getGreen() * 255);
+                int b = (int) Math.round(c.getBlue() * 255);
+                double a = c.getOpacity();
+                style = String.format("-fx-background-color: rgba(%d, %d, %d, %.3f);", r, g, b, a);
+            }
+            case IMAGE -> {
+                String uri = s.getProjectorImageUri();
+                if (uri == null || uri.isBlank()) {
+                    style = "-fx-background-color: transparent;";
+                } else {
+                    String cssUrl = uri.replace("\\", "/");
+                    style = String.format(
+                            "-fx-background-image: url(\"%s\"); " +
+                                    "-fx-background-size: cover; " +
+                                    "-fx-background-position: center center; " +
+                                    "-fx-background-repeat: no-repeat;",
+                            cssUrl
+                    );
+                }
+            }
+            default -> style = "-fx-background-color: transparent;";
+        }
+        currentSubtitleLabel.setStyle(style);
+    }
+
     // Dirty handling (same semantics as before)
-    private final javafx.beans.property.BooleanProperty dirty = new javafx.beans.property.SimpleBooleanProperty(false);
+    private final BooleanProperty dirty = new SimpleBooleanProperty(false);
 
     private void setDirty(boolean value) {
         dirty.set(value);
