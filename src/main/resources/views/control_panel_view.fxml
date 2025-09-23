@@ -11,16 +11,26 @@
         <VBox>
             <MenuBar fx:id="menuBar">
                 <Menu text="File">
-                    <MenuItem fx:id="openMenuItem" text="Open...">
+                    <MenuItem fx:id="newMenuItem" text="New Project">
                         <graphic>
                             <!-- Placeholder for 16x16 icon -->
                             <Region prefWidth="16" minWidth="16" maxWidth="16" prefHeight="16"/>
                         </graphic>
                     </MenuItem>
+                    <MenuItem fx:id="openMenuItem" text="Open..."/>
                     <MenuItem fx:id="saveMenuItem" text="Save"/>
                     <MenuItem fx:id="saveAsMenuItem" text="Save as..."/>
                     <SeparatorMenuItem/>
                     <MenuItem fx:id="exitMenuItem" text="Exit"/>
+                </Menu>
+                <Menu text="Edit">
+                    <MenuItem fx:id="undoMenuItem" text="Undo">
+                        <graphic>
+                            <!-- Placeholder for 16x16 icon -->
+                            <Region prefWidth="16" minWidth="16" maxWidth="16" prefHeight="16"/>
+                        </graphic>
+                    </MenuItem>
+                    <MenuItem fx:id="redoMenuItem" text="Redo"/>
                 </Menu>
             </MenuBar>
             <HBox spacing="10" alignment="CENTER_RIGHT">
@@ -39,8 +49,7 @@
                 <Insets top="10" right="10" bottom="10" left="10"/>
             </padding>
 
-            <HBox spacing="10" alignment="CENTER_LEFT">
-<!--                <Label text="Current Subtitle:" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>-->
+            <HBox spacing="10" alignment="CENTER">
                 <Label fx:id="currentSubtitleLabel" text="(none)" style="-fx-font-size: 14px; -fx-text-fill: blue;"/>
             </HBox>
 

@@ -1,6 +1,6 @@
 package com.app.subly.persistence;
 
-import com.app.subly.common.SublyApplicationStage;
+import com.app.subly.component.SublyApplicationStage;
 import com.app.subly.model.SublyProjectFile;
 import com.app.subly.model.SublySettings;
 import com.app.subly.model.Subtitle;

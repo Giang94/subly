@@ -1,4 +1,4 @@
-package com.app.subly.common;
+package com.app.subly.component;
 
 import com.app.subly.model.Subtitle;
 import javafx.scene.control.TableCell;

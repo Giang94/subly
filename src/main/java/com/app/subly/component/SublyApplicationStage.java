@@ -1,4 +1,4 @@
-package com.app.subly.common;
+package com.app.subly.component;
 
 import com.app.subly.utils.AppIconUtils;
 import javafx.stage.Stage;

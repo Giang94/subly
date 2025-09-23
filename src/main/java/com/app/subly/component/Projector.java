@@ -1,6 +1,5 @@
 package com.app.subly.component;
 
-import com.app.subly.common.SublyApplicationStage;
 import com.app.subly.model.SublySettings;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
