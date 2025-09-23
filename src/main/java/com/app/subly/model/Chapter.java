@@ -9,7 +9,6 @@ public class Chapter {
     private Integer id;
     private String title;
     private List<Subtitle> subtitles = new ArrayList<>();
-
     private ChapterBackground background = ChapterBackground.transparent();
 
     public Chapter() {
@@ -50,5 +49,10 @@ public class Chapter {
 
     public void setBackground(ChapterBackground background) {
         this.background = (background != null) ? background : ChapterBackground.transparent();
+    }
+
+    @Override
+    public String toString() {
+        return this.title;
     }
 }

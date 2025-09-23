@@ -1,6 +1,7 @@
 package com.app.subly.persistence;
 
 import com.app.subly.component.SublyApplicationStage;
+import com.app.subly.model.Chapter;
 import com.app.subly.model.SublyProjectFile;
 import com.app.subly.model.SublySettings;
 import com.app.subly.model.Subtitle;
@@ -15,7 +16,9 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipOutputStream;
@@ -49,7 +52,8 @@ public class SublyProjectFileManager {
         }
 
         // Keep absolute path to enable subsequent save to the same file
-        return new SublyProjectFile(file.getAbsolutePath(), settings, subtitles);
+        // TODO
+        return new SublyProjectFile(file.getAbsolutePath(), settings, new HashMap<>());
     }
 
     public void save(TableView<Subtitle> subtitleTable, SublyProjectSession session) {
@@ -89,7 +93,7 @@ public class SublyProjectFileManager {
             SublyProjectFile projectFile = new SublyProjectFile(
                     target.getAbsolutePath(),
                     session.getSettings(),
-                    subtitleTable.getItems()
+                    new HashMap<>()//subtitleTable.getItems()
             );
             saveProjectAsZip(projectFile);
 
@@ -119,7 +123,7 @@ public class SublyProjectFileManager {
     private void saveProjectAsZip(SublyProjectFile projectFile) throws IOException {
         // Create temp files for settings + subtitles
         File settingsFile = saveSettings(projectFile.getFileName(), projectFile.getSettings());
-        File subtitlesFile = saveSubtitles(projectFile.getFileName(), projectFile.getSubtitles());
+        File subtitlesFile = saveSubtitles(projectFile.getFileName(), projectFile.getChapters().get(0).getSubtitles());
 
         // Package them into one archive
         try (FileOutputStream fos = new FileOutputStream(projectFile.getFileName());
@@ -135,7 +139,7 @@ public class SublyProjectFileManager {
             // --- subtitles.json ---
             ZipEntry subtitlesEntry = new ZipEntry("subtitles.json");
             zipOut.putNextEntry(subtitlesEntry);
-            byte[] subtitlesBytes = objectMapper.writeValueAsBytes(projectFile.getSubtitles());
+            byte[] subtitlesBytes = objectMapper.writeValueAsBytes(projectFile.getChapters().get(0).getSubtitles());
             zipOut.write(subtitlesBytes);
             zipOut.closeEntry();
         }

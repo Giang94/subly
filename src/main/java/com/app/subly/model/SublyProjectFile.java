@@ -4,7 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.List;
+import java.util.Map;
 
 @Data
 @AllArgsConstructor
@@ -13,5 +13,5 @@ public class SublyProjectFile {
 
     private String fileName;
     private SublySettings settings;
-    private List<Subtitle> subtitles;
+    private Map<Integer, Chapter> chapters;
 }

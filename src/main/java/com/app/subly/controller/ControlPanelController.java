@@ -3,10 +3,7 @@ package com.app.subly.controller;
 import com.app.subly.SublyApplication;
 import com.app.subly.component.SublyApplicationStage;
 import com.app.subly.component.*;
-import com.app.subly.model.BackgroundType;
-import com.app.subly.model.SublyProjectFile;
-import com.app.subly.model.SublySettings;
-import com.app.subly.model.Subtitle;
+import com.app.subly.model.*;
 import com.app.subly.persistence.SublyProjectFileManager;
 import com.app.subly.project.SublyProjectSession;
 import com.app.subly.utils.ColorConvertUtils;
@@ -169,6 +166,8 @@ public class ControlPanelController {
             subtitleTable.getSelectionModel().selectFirst();
             currentSubtitleLabel.setText(data.getFirst().getPrimaryText().replace("\\n", "\n"));
         }
+
+        Platform.runLater(this::ensureInitialChapter);
     }
 
     private void backgroundControlsSetup() {
@@ -563,7 +562,7 @@ public class ControlPanelController {
                 // Update app title/settings and table
                 app.updateSetting(projectFile.getSettings());
                 app.updateTitle(projectFile.getFileName());
-                reloadSubtitleTable(projectFile.getSubtitles());
+                reloadSubtitleTable(projectFile.getChapters().get(0).getSubtitles());
 
                 // Read settings from file
                 SublySettings loaded = projectFile.getSettings();
@@ -813,6 +812,55 @@ public class ControlPanelController {
             return Math.clamp(v, MIN_FONT_SIZE, MAX_FONT_SIZE);
         } catch (NumberFormatException ex) {
             return MIN_FONT_SIZE;
+        }
+    }
+
+    // Handle chapters
+    // Existing injections
+    @FXML private ListView<Chapter> chapterListView;
+    @FXML private Label chapterCountLabel;
+
+    private void ensureInitialChapter() {
+        if (chapterListView == null) {
+            throw new IllegalStateException("chapterListView is not injected.");
+        }
+        ObservableList<Chapter> items = chapterListView.getItems();
+        if (items.isEmpty()) {
+            Chapter chapter = createDefaultChapter(1);
+            items.add(chapter);
+            chapterListView.getSelectionModel().select(chapter);
+            updateChapterCount();
+
+            ObservableList<Subtitle> data = FXCollections.observableArrayList();
+            data.add(new Subtitle(1, "", ""));
+        } else {
+            // Ensure the selected (or first) chapter has at least one empty subtitle
+            Chapter current = chapterListView.getSelectionModel().getSelectedItem();
+            if (current == null) current = items.get(0);
+            if (current.getSubtitles().isEmpty()) {
+                current.getSubtitles().add(newEmptySubtitle());
+            }
+        }
+    }
+
+    private Chapter createDefaultChapter(int index) {
+        Chapter c = new Chapter();
+        c.setTitle("Chapter " + index);
+        c.getSubtitles().add(newEmptySubtitle());
+        return c;
+    }
+
+    private Subtitle newEmptySubtitle() {
+        Subtitle s = new Subtitle();
+        // Adjust to your model's field names if different
+        s.setPrimaryText("");
+        s.setSecondaryText("");
+        return s;
+    }
+
+    private void updateChapterCount() {
+        if (chapterCountLabel != null) {
+            chapterCountLabel.setText(String.valueOf(chapterListView.getItems().size()));
         }
     }
 }

@@ -55,16 +55,4 @@ public class SublyProjectSession {
         mutator.accept(settings);
         dirty = true;
     }
-
-//    public void save(TableView<Subtitle> subtitleTableView) throws IOException {
-//        SublyProjectFileManager fileManager = new SublyProjectFileManager();
-//        fileManager.save(subtitleTableView, this);
-//        dirty = false;
-//    }
-
-//    public void saveAs(File file) throws IOException {
-//        SublyProjectFileManager.saveProject(settings, projectFile);
-//        this.projectFile = file;
-//        dirty = false;
-//    }
 }

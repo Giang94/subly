@@ -1,127 +1,149 @@
 <?xml version="1.0" encoding="UTF-8"?>
-
+<?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
-<?import javafx.geometry.Insets?>
 
-<BorderPane xmlns:fx="http://javafx.com/fxml" fx:controller="com.app.subly.controller.ControlPanelController">
+<BorderPane xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.app.subly.controller.ControlPanelController">
 
-    <!-- Top toolbar with toggle -->
     <top>
-        <VBox>
-            <MenuBar fx:id="menuBar">
+        <MenuBar fx:id="menuBar">
+            <menus>
                 <Menu text="File">
-                    <MenuItem fx:id="newMenuItem" text="New Project">
-                        <graphic>
-                            <!-- Placeholder for 16x16 icon -->
-                            <Region prefWidth="16" minWidth="16" maxWidth="16" prefHeight="16"/>
-                        </graphic>
-                    </MenuItem>
-                    <MenuItem fx:id="openMenuItem" text="Open..."/>
-                    <MenuItem fx:id="saveMenuItem" text="Save"/>
-                    <MenuItem fx:id="saveAsMenuItem" text="Save as..."/>
-                    <SeparatorMenuItem/>
-                    <MenuItem fx:id="exitMenuItem" text="Exit"/>
+                    <items>
+                        <MenuItem fx:id="newMenuItem" text="New"/>
+                        <MenuItem fx:id="openMenuItem" text="Open..."/>
+                        <MenuItem fx:id="saveMenuItem" text="Save"/>
+                        <MenuItem fx:id="saveAsMenuItem" text="Save As..."/>
+                        <SeparatorMenuItem/>
+                        <MenuItem fx:id="exitMenuItem" text="Exit"/>
+                    </items>
                 </Menu>
                 <Menu text="Edit">
-                    <MenuItem fx:id="undoMenuItem" text="Undo">
-                        <graphic>
-                            <!-- Placeholder for 16x16 icon -->
-                            <Region prefWidth="16" minWidth="16" maxWidth="16" prefHeight="16"/>
-                        </graphic>
-                    </MenuItem>
-                    <MenuItem fx:id="redoMenuItem" text="Redo"/>
+                    <items>
+                        <MenuItem fx:id="undoMenuItem" text="Undo"/>
+                        <MenuItem fx:id="redoMenuItem" text="Redo"/>
+                    </items>
                 </Menu>
-            </MenuBar>
-            <HBox spacing="10" alignment="CENTER_RIGHT">
-                <padding>
-                    <Insets top="10" right="10" bottom="10" left="10"/>
-                </padding>
-                <ToggleButton fx:id="toggleShowScreenButton" text="Show Screen ON/OFF"/>
-            </HBox>
-        </VBox>
+            </menus>
+        </MenuBar>
     </top>
 
-    <!-- Center: grid with subtitle list -->
+    <left>
+        <VBox fx:id="chaptersPanel"
+              xmlns="http://javafx.com/javafx/21"
+              xmlns:fx="http://javafx.com/fxml/1"
+              spacing="8" prefWidth="260" minWidth="220" maxWidth="400">
+
+            <padding>
+                <Insets top="8" right="8" bottom="8" left="8"/>
+            </padding>
+
+            <HBox spacing="8" alignment="CENTER_LEFT">
+                <Label text="Chapters"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <ToggleButton fx:id="autoSortToggle" text="Auto-sort" selected="true"/>
+            </HBox>
+
+            <TextField fx:id="chapterSearchField" promptText="Filter chapters..."/>
+
+            <HBox spacing="6" alignment="CENTER_LEFT">
+                <Button fx:id="addChapterBtn" text="Add"/>
+                <Button fx:id="renameChapterBtn" text="Rename" disable="true"/>
+                <Button fx:id="deleteChapterBtn" text="Delete" disable="true"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Button fx:id="moveChapterUpBtn" text="Up" disable="true"/>
+                <Button fx:id="moveChapterDownBtn" text="Down" disable="true"/>
+            </HBox>
+
+            <ListView fx:id="chapterListView" VBox.vgrow="ALWAYS">
+                <placeholder>
+                    <Label text="No chapters yet"/>
+                </placeholder>
+                <contextMenu>
+                    <ContextMenu>
+                        <items>
+                            <MenuItem fx:id="addChapterMenuItem" text="Add Chapter"/>
+                            <SeparatorMenuItem/>
+                            <MenuItem fx:id="renameChapterMenuItem" text="Rename" disable="true"/>
+                            <MenuItem fx:id="deleteChapterMenuItem" text="Delete" disable="true"/>
+                            <SeparatorMenuItem/>
+                            <MenuItem fx:id="moveUpMenuItem" text="Move Up" disable="true"/>
+                            <MenuItem fx:id="moveDownMenuItem" text="Move Down" disable="true"/>
+                        </items>
+                    </ContextMenu>
+                </contextMenu>
+            </ListView>
+
+            <HBox spacing="6" alignment="CENTER_LEFT">
+                <Label text="Total:"/>
+                <Label fx:id="chapterCountLabel" text="0"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Label fx:id="selectionInfoLabel" text="" opacity="0.7"/>
+            </HBox>
+        </VBox>
+    </left>
+
     <center>
         <VBox spacing="10">
             <padding>
                 <Insets top="10" right="10" bottom="10" left="10"/>
             </padding>
 
-            <HBox spacing="10" alignment="CENTER">
-                <Label fx:id="currentSubtitleLabel" text="(none)" style="-fx-font-size: 14px; -fx-text-fill: blue;"/>
-            </HBox>
+            <!-- Toolbar -->
+            <HBox spacing="8" alignment="CENTER_LEFT">
+                <ToggleButton fx:id="toggleShowScreenButton" text="Open Show Screen"/>
 
-            <HBox fx:id="styleToolbar" spacing="10" alignment="CENTER_LEFT"
-                  xmlns="http://javafx.com/javafx/24.0.1"
-                  xmlns:fx="http://javafx.com/fxml/1">
-                <padding>
-                    <Insets top="6" right="10" bottom="6" left="10"/>
-                </padding>
+                <Separator orientation="VERTICAL"/>
 
-                <Label text="Font size"/>
-                <TextField fx:id="fontSizeField" prefWidth="64" promptText="px"/>
+                <Label text="Font size:"/>
+                <Button fx:id="fontSizeDownButton" text="-" minWidth="30"/>
+                <TextField fx:id="fontSizeField" promptText="Size" prefWidth="60"/>
+                <Button fx:id="fontSizeUpButton" text="+" minWidth="30"/>
 
-                <!-- Down / Up arrow buttons -->
-                <Button fx:id="fontSizeDownButton" text="▼" minWidth="28"/>
-                <Button fx:id="fontSizeUpButton" text="▲" minWidth="28"/>
+                <Separator orientation="VERTICAL"/>
 
-                <Label text="Text color"/>
+                <Label text="Text color:"/>
                 <ColorPicker fx:id="textColorPicker"/>
 
-                <Separator orientation="VERTICAL" prefHeight="24"/>
+                <Separator orientation="VERTICAL"/>
 
-                <Label text="Background"/>
-                <fx:define>
-                    <ToggleGroup fx:id="bgToggleGroup"/>
-                </fx:define>
+                <Label text="Background:"/>
+                <!-- ToggleGroup is created by controller -->
+                <RadioButton fx:id="bgTransparentRadio" text="Transparent" selected="true"/>
+                <RadioButton fx:id="bgColorRadio" text="Color"/>
+                <ColorPicker fx:id="bgColorPicker"/>
+                <RadioButton fx:id="bgImageRadio" text="Image"/>
+                <TextField fx:id="imagePathField" promptText="Image URI" prefWidth="180"/>
+                <Button fx:id="chooseImageButton" text="Browse..." onAction="#onChooseImage"/>
 
-                <RadioButton fx:id="bgTransparentRadio"
-                             text="Transparent"
-                             toggleGroup="$bgToggleGroup"
-                             selected="true"/>
-
-                <RadioButton fx:id="bgColorRadio"
-                             text="Color"
-                             toggleGroup="$bgToggleGroup"/>
-                <ColorPicker fx:id="bgColorPicker" disable="true"/>
-
-                <RadioButton fx:id="bgImageRadio"
-                             text="Image"
-                             toggleGroup="$bgToggleGroup"/>
-                <Button fx:id="chooseImageButton"
-                        text="Choose..."
-                        onAction="#onChooseImage"
-                        disable="true"/>
-                <TextField fx:id="imagePathField"
-                           promptText="No image selected"
-                           editable="false"
-                           prefWidth="220"
-                           disable="true"/>
+                <Region HBox.hgrow="ALWAYS"/>
             </HBox>
 
-            <!-- Grid/Table for subtitles -->
-            <TableView fx:id="subtitleTable" prefHeight="300">
+            <!-- Current subtitle preview -->
+            <Label fx:id="currentSubtitleLabel"
+                   minHeight="60" prefHeight="60" maxHeight="60"
+                   style="-fx-border-color: -fx-box-border; -fx-padding: 8;"/>
+
+            <!-- Subtitle table -->
+            <TableView fx:id="subtitleTable" VBox.vgrow="ALWAYS" editable="true">
                 <columns>
-                    <TableColumn fx:id="indexColumn" text="Index" prefWidth="80"/>
-                    <TableColumn fx:id="primaryTextColumn" text="Text" prefWidth="400"/>
-                    <TableColumn fx:id="secondaryTextColumn" text="Note" prefWidth="400"/>
+                    <TableColumn fx:id="indexColumn" text="#"/>
+                    <TableColumn fx:id="primaryTextColumn" text="Primary Text"/>
+                    <TableColumn fx:id="secondaryTextColumn" text="Secondary Text"/>
                 </columns>
             </TableView>
+
+            <!-- Navigation -->
+            <HBox spacing="8" alignment="CENTER_LEFT">
+                <Button fx:id="prevButton" text="Previous"/>
+                <Button fx:id="nextButton" text="Next"/>
+            </HBox>
         </VBox>
     </center>
 
-    <!-- Bottom controls -->
-    <bottom>
-        <HBox alignment="center" spacing="20">
-            <padding>
-                <Insets top="10" right="10" bottom="10" left="10"/>
-            </padding>
-            <Button fx:id="prevButton" text="⏮ Prev"/>
-            <Button fx:id="nextButton" text="Next ⏭"/>
-        </HBox>
-    </bottom>
-
+    <padding>
+        <Insets top="8" right="8" bottom="8" left="8"/>
+    </padding>
 </BorderPane>
-

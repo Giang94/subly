@@ -4,8 +4,9 @@ module com.app.subly {
     requires static lombok;
     requires com.fasterxml.jackson.databind;
     requires java.desktop;
+    requires com.fasterxml.jackson.datatype.jsr310;
 
-
+    opens com.app.subly.model to com.fasterxml.jackson.databind;
     opens com.app.subly to javafx.fxml;
     opens com.app.subly.controller to javafx.fxml;
     opens com.app.subly.component to javafx.fxml;
