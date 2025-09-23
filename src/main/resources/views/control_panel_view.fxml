@@ -10,16 +10,20 @@
     <top>
         <VBox>
             <MenuBar fx:id="menuBar">
-                <Menu text="File" >
-                    <MenuItem fx:id="openMenuItem" text="📂 Open..."/>
-                    <MenuItem fx:id="saveMenuItem" text="💾 Save"/>
-                    <SeparatorMenuItem/>
-                    <MenuItem fx:id="settingsMenuItem" text="⚙ Settings"/>
+                <Menu text="File">
+                    <MenuItem fx:id="openMenuItem" text="Open...">
+                        <graphic>
+                            <!-- Placeholder for 16x16 icon -->
+                            <Region prefWidth="16" minWidth="16" maxWidth="16" prefHeight="16"/>
+                        </graphic>
+                    </MenuItem>
+                    <MenuItem fx:id="saveMenuItem" text="Save"/>
+                    <MenuItem fx:id="saveAsMenuItem" text="Save as..."/>
                     <SeparatorMenuItem/>
                     <MenuItem fx:id="exitMenuItem" text="Exit"/>
                 </Menu>
             </MenuBar>
-            <HBox spacing="10">
+            <HBox spacing="10" alignment="CENTER_RIGHT">
                 <padding>
                     <Insets top="10" right="10" bottom="10" left="10"/>
                 </padding>
@@ -34,8 +38,33 @@
             <padding>
                 <Insets top="10" right="10" bottom="10" left="10"/>
             </padding>
-            <Label text="Current Subtitle:" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
-            <Label fx:id="currentSubtitleLabel" text="(none)" style="-fx-font-size: 14px; -fx-text-fill: blue;"/>
+
+            <HBox spacing="10" alignment="CENTER_LEFT">
+<!--                <Label text="Current Subtitle:" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>-->
+                <Label fx:id="currentSubtitleLabel" text="(none)" style="-fx-font-size: 14px; -fx-text-fill: blue;"/>
+            </HBox>
+
+            <HBox fx:id="styleToolbar" spacing="10" alignment="CENTER_LEFT"
+                  xmlns="http://javafx.com/javafx/24.0.1"
+                  xmlns:fx="http://javafx.com/fxml/1">
+                <padding>
+                    <Insets top="6" right="10" bottom="6" left="10"/>
+                </padding>
+
+                <Label text="Font size"/>
+                <TextField fx:id="fontSizeField" prefWidth="64" promptText="px"/>
+
+                <!-- Down / Up arrow buttons -->
+                <Button fx:id="fontSizeDownButton" text="▼" minWidth="28"/>
+                <Button fx:id="fontSizeUpButton" text="▲" minWidth="28"/>
+
+                <Label text="Text color"/>
+                <ColorPicker fx:id="textColorPicker"/>
+
+                <Label text="Background"/>
+                <CheckBox fx:id="bgTransparentCheckBox" text="Transparent"/>
+                <ColorPicker fx:id="bgColorPicker"/>
+            </HBox>
 
             <!-- Grid/Table for subtitles -->
             <TableView fx:id="subtitleTable" prefHeight="300">

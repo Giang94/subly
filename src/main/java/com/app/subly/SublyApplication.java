@@ -16,6 +16,9 @@ public class SublyApplication extends Application {
     private ControlPanel controlPanel;
     private SublySettings settings;
 
+    private String currentTitle = "Untitled";
+    private boolean dirty = false;
+
     @Override
     public void start(Stage primaryStage) throws IOException {
         settings = AppSettingsManager.load();
@@ -54,7 +57,21 @@ public class SublyApplication extends Application {
     }
 
     public void updateTitle(String title) {
+        this.currentTitle = (title == null || title.isBlank()) ? "Untitled" : title;
+        applyWindowTitle();
+    }
+
+    private void applyWindowTitle() {
+        if (controlPanel == null || controlPanel.getScene() == null || controlPanel.getScene().getWindow() == null) {
+            return;
+        }
         Stage primaryStage = (Stage) controlPanel.getScene().getWindow();
-        primaryStage.setTitle("Subly - " + title);
+        String finalTitle = "Subly - " + currentTitle + (dirty ? " *" : "");
+        primaryStage.setTitle(finalTitle);
+    }
+
+    public void setDirty(boolean value) {
+        this.dirty = value;
+        applyWindowTitle();
     }
 }

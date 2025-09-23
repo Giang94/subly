@@ -10,7 +10,7 @@ public class AppSettingsManager {
     private static final String SETTINGS_FILE = "settings/app_settings.properties";
     private static final String DEFAULT_PROJECTOR_COLOR = "33cc33";
     private static final String DEFAULT_SUBTITLE_COLOR = "ffff00";
-    private static final double DEFAULT_SUBTITLE_FONT_SIZE = 24.0;
+    private static final Integer DEFAULT_SUBTITLE_FONT_SIZE = 24;
 
     public static SublySettings load() throws IOException {
         Properties properties = new Properties();
@@ -24,7 +24,7 @@ public class AppSettingsManager {
                 settings.setProjectorTransparent("true".equalsIgnoreCase(properties.getProperty("projector.transparent", "false")));
                 settings.setProjectorColor(properties.getProperty("projector.color", DEFAULT_PROJECTOR_COLOR));
                 settings.setSubtitleColor(properties.getProperty("subtitle.color", DEFAULT_SUBTITLE_COLOR));
-                settings.setSubtitleFontSize(Double.parseDouble(properties.getProperty("subtitle.fontSize", String.valueOf(DEFAULT_SUBTITLE_FONT_SIZE))));
+                settings.setSubtitleFontSize(Integer.valueOf(properties.getProperty("subtitle.fontSize", String.valueOf(DEFAULT_SUBTITLE_FONT_SIZE))));
             } else {
                 // Resource not found → init defaults
                 initWithDefaults(settings);
@@ -49,7 +49,7 @@ public class AppSettingsManager {
         settings.setProjectorTransparent(Boolean.parseBoolean(properties.getProperty("projector.transparent", "false")));
         settings.setProjectorColor(properties.getProperty("projector.color", DEFAULT_PROJECTOR_COLOR));
         settings.setSubtitleColor(properties.getProperty("subtitle.color", DEFAULT_SUBTITLE_COLOR));
-        settings.setSubtitleFontSize(Double.parseDouble(properties.getProperty("subtitle.fontSize", String.valueOf(DEFAULT_SUBTITLE_FONT_SIZE))));
+        settings.setSubtitleFontSize(Integer.valueOf(properties.getProperty("subtitle.fontSize", String.valueOf(DEFAULT_SUBTITLE_FONT_SIZE))));
         return settings;
     }
 
@@ -60,16 +60,28 @@ public class AppSettingsManager {
         settings.setSubtitleFontSize(DEFAULT_SUBTITLE_FONT_SIZE);
     }
 
-    public static void save(SublySettings settings) throws IOException {
-        Properties properties = new Properties();
-        properties.setProperty("projector.transparent", String.valueOf(settings.isProjectorTransparent()));
-        properties.setProperty("projector.color", settings.getProjectorColor());
-        properties.setProperty("subtitle.color", settings.getSubtitleColor());
-        properties.setProperty("subtitle.fontSize", String.valueOf(settings.getSubtitleFontSize()));
+//    public static void save(SublySettings settings) throws IOException {
+//        Properties properties = new Properties();
+//        properties.setProperty("projector.transparent", String.valueOf(settings.isProjectorTransparent()));
+//        properties.setProperty("projector.color", settings.getProjectorColor());
+//        properties.setProperty("subtitle.color", settings.getSubtitleColor());
+//        properties.setProperty("subtitle.fontSize", String.valueOf(settings.getSubtitleFontSize()));
+//
+//        // Direct path to resources/settings
+//        try (FileOutputStream out = new FileOutputStream("src/main/resources/settings/app_settings.properties")) {
+//            properties.store(out, "App Settings");
+//        }
+//    }
 
-        // Direct path to resources/settings
-        try (FileOutputStream out = new FileOutputStream("src/main/resources/settings/app_settings.properties")) {
-            properties.store(out, "App Settings");
-        }
-    }
+//    public static void saveToFile(SublySettings settings, File file) throws IOException {
+//        Properties properties = new Properties();
+//        properties.setProperty("projector.transparent", String.valueOf(settings.isProjectorTransparent()));
+//        properties.setProperty("projector.color", settings.getProjectorColor());
+//        properties.setProperty("subtitle.color", settings.getSubtitleColor());
+//        properties.setProperty("subtitle.fontSize", String.valueOf(settings.getSubtitleFontSize()));
+//
+//        try (FileOutputStream out = new FileOutputStream(file)) {
+//            properties.store(out, "Subly Project Settings");
+//        }
+//    }
 }

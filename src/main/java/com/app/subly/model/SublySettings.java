@@ -14,7 +14,7 @@ public class SublySettings implements Serializable {
     private boolean projectorTransparent = true; // default
     private String projectorColor = "33cc33";   // default black
     private String subtitleColor = "FFFF00";    // default yellow
-    private double subtitleFontSize = 24;        // default size
+    private Integer subtitleFontSize = 24;        // default size
 
     public String getProjectorColor() {
         return tidyUpColorCode(projectorColor);

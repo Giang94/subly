@@ -1,9 +1,14 @@
 package com.app.subly.persistence;
 
+import com.app.subly.common.SublyApplicationStage;
 import com.app.subly.model.SublyProjectFile;
 import com.app.subly.model.SublySettings;
 import com.app.subly.model.Subtitle;
+import com.app.subly.project.SublyProjectSession;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import javafx.scene.control.TableView;
+import javafx.stage.FileChooser;
+import javafx.stage.Stage;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -31,8 +36,7 @@ public class SublyProjectFileManager {
                     if (entry.getName().endsWith("settings.json")) {
                         settings = objectMapper.readValue(in, SublySettings.class);
                     } else if (entry.getName().endsWith("subtitles.json")) {
-                        subtitles = objectMapper.readValue(
-                                in,
+                        subtitles = objectMapper.readValue(in,
                                 objectMapper.getTypeFactory().constructCollectionType(List.class, Subtitle.class)
                         );
                     }
@@ -44,10 +48,75 @@ public class SublyProjectFileManager {
             throw new IOException("Invalid .subly project file: missing settings or subtitles.");
         }
 
-        return new SublyProjectFile(file.getName(), settings, subtitles);
+        // Keep absolute path to enable subsequent save to the same file
+        return new SublyProjectFile(file.getAbsolutePath(), settings, subtitles);
     }
 
-    public void saveProject(SublyProjectFile projectFile) throws IOException {
+    public void save(TableView<Subtitle> subtitleTable, SublyProjectSession session) {
+        File target = null;
+        boolean updateSession = false;
+
+        if (session != null && session.getProjectFile() != null && session.getProjectFile().exists()) {
+            target = session.getProjectFile();
+        } else {
+            String initial = (session != null && session.getProjectFile() != null)
+                    ? session.getProjectFile().getName()
+                    : "my_project.subly";
+            target = chooseTarget("Save Subly project", initial);
+            if (target == null) return;
+            updateSession = true;
+        }
+
+        performSave(target, subtitleTable, session, updateSession);
+    }
+
+    // Save As: always prompts; always updates session to the new file
+    public void saveAs(TableView<Subtitle> subtitleTable, SublyProjectSession session) {
+        String initial = (session != null && session.getProjectFile() != null)
+                ? session.getProjectFile().getName()
+                : "my_project.subly";
+        File target = chooseTarget("Save Subly project as", initial);
+        if (target == null) return;
+
+        performSave(target, subtitleTable, session, true);
+    }
+
+    private void performSave(File target,
+                             TableView<Subtitle> subtitleTable,
+                             SublyProjectSession session,
+                             boolean updateSession) {
+        try {
+            SublyProjectFile projectFile = new SublyProjectFile(
+                    target.getAbsolutePath(),
+                    session.getSettings(),
+                    subtitleTable.getItems()
+            );
+            saveProjectAsZip(projectFile);
+
+            if (updateSession) {
+                updateSessionFile(session, target);
+            }
+
+            System.out.println("Project saved to: " + target.getAbsolutePath());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void updateSessionFile(SublyProjectSession session, File target) {
+        if (session == null) return;
+        try {
+            SublyProjectSession.class.getMethod("setCurrentFile", File.class).invoke(session, target);
+        } catch (Exception ignore) {
+            try {
+                SublyProjectSession.class.getMethod("setProjectFile", File.class).invoke(session, target);
+            } catch (Exception ignored) {
+                // No suitable setter; ignore
+            }
+        }
+    }
+
+    private void saveProjectAsZip(SublyProjectFile projectFile) throws IOException {
         // Create temp files for settings + subtitles
         File settingsFile = saveSettings(projectFile.getFileName(), projectFile.getSettings());
         File subtitlesFile = saveSubtitles(projectFile.getFileName(), projectFile.getSubtitles());
@@ -86,5 +155,24 @@ public class SublyProjectFileManager {
         File file = File.createTempFile(fileName + "_subtitles", ".json");
         objectMapper.writeValue(file, subtitles);
         return file;
+    }
+
+    private File chooseTarget(String title, String initialFileName) {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle(title);
+        fileChooser.getExtensionFilters().add(
+                new FileChooser.ExtensionFilter("Subly Project Files", "*.subly")
+        );
+        fileChooser.setInitialFileName(initialFileName);
+
+        Stage stage = new SublyApplicationStage();
+        File chosen = fileChooser.showSaveDialog(stage);
+        if (chosen == null) return null;
+
+        String path = chosen.getAbsolutePath();
+        if (!path.toLowerCase().endsWith(".subly")) {
+            chosen = new File(path + ".subly");
+        }
+        return chosen;
     }
 }

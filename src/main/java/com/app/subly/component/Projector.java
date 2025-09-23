@@ -2,6 +2,7 @@ package com.app.subly.component;
 
 import com.app.subly.common.SublyApplicationStage;
 import com.app.subly.model.SublySettings;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -15,17 +16,21 @@ import javafx.stage.StageStyle;
 public class Projector {
     private Stage stage;
     private Label label;
+    private StackPane layout;
 
     public Projector() {
         stage = new SublyApplicationStage();
         stage.initStyle(StageStyle.TRANSPARENT);
 
         label = new Label();
+        label.setWrapText(true);
         label.setAlignment(Pos.CENTER);
         label.setTextAlignment(TextAlignment.CENTER);
 
-        StackPane layout = new StackPane(label);
+        layout = new StackPane(label);
         layout.setAlignment(Pos.CENTER);
+        layout.setPadding(new Insets(0, 40, 0, 40)); // default side padding
+
         Scene scene = new Scene(layout, 600, 400);
         stage.setScene(scene);
 
@@ -102,5 +107,33 @@ public class Projector {
         label.setStyle(String.format("-fx-font-size: %spx; -fx-text-fill: %s;",
                 settings.getSubtitleFontSize(),
                 settings.getSubtitleColor()));
+    }
+
+    public void setFontSize(int px) {
+        if (label == null) return;
+
+        String style = label.getStyle();
+        if (style == null) style = "";
+
+        // Remove any existing font-size declaration (case-insensitive)
+        style = style.replaceAll("(?i)\\s*-fx-font-size\\s*:\\s*[^;]+;?", "");
+
+        // Ensure styles are separated by a semicolon
+        if (!style.isBlank() && !style.trim().endsWith(";")) {
+            style += ";";
+        }
+
+        // Append the new font size, preserving other label styles (e.g., text fill)
+        label.setStyle(style + "-fx-font-size: " + px + "px;");
+    }
+
+    public void setContentPadding(double top, double right, double bottom, double left) {
+        if (layout != null) {
+            layout.setPadding(new Insets(top, right, bottom, left));
+        }
+    }
+
+    public void setHorizontalPadding(double padding) {
+        setContentPadding(0, padding, 0, padding);
     }
 }
