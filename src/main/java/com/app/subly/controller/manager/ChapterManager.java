@@ -14,7 +14,7 @@ import javafx.scene.layout.HBox;
 
 import java.util.function.Supplier;
 
-class ChapterManager {
+public class ChapterManager {
 
     private final ListView<Chapter> chapterListView;
     private final Label chapterCountLabel;
@@ -28,16 +28,16 @@ class ChapterManager {
     private final SubtitleTableManager subtitleManager;
     private final Runnable markDirty;
 
-    ChapterManager(ListView<Chapter> chapterListView,
-                   Label chapterCountLabel,
-                   MenuItem addChapterMenuItem,
-                   MenuItem renameChapterMenuItem,
-                   MenuItem deleteChapterMenuItem,
-                   MenuItem moveUpMenuItem,
-                   MenuItem moveDownMenuItem,
-                   Supplier<SublyProjectSession> sessionSupplier,
-                   SubtitleTableManager subtitleManager,
-                   Runnable markDirty) {
+    public ChapterManager(ListView<Chapter> chapterListView,
+                          Label chapterCountLabel,
+                          MenuItem addChapterMenuItem,
+                          MenuItem renameChapterMenuItem,
+                          MenuItem deleteChapterMenuItem,
+                          MenuItem moveUpMenuItem,
+                          MenuItem moveDownMenuItem,
+                          Supplier<SublyProjectSession> sessionSupplier,
+                          SubtitleTableManager subtitleManager,
+                          Runnable markDirty) {
         this.chapterListView = chapterListView;
         this.chapterCountLabel = chapterCountLabel;
         this.addChapterMenuItem = addChapterMenuItem;
@@ -50,11 +50,11 @@ class ChapterManager {
         this.markDirty = markDirty;
     }
 
-    void initialize() {
+    public void initialize() {
         setupContextActions();
     }
 
-    void onSessionSet() {
+    public void onSessionSet() {
         SublyProjectSession session = sessionSupplier.get();
         if (session == null) return;
         chapterListView.setItems(session.getChapters());

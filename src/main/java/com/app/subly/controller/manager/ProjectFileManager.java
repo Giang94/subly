@@ -18,7 +18,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.function.Supplier;
 
-class ProjectFileManager {
+public class ProjectFileManager {
 
     private static final String PROJECT_EXT = ".subly";
 
@@ -37,19 +37,19 @@ class ProjectFileManager {
     private final java.util.function.Consumer<Boolean> dirtySetter;
     private final Supplier<Boolean> dirtyFlagSupplier;
 
-    ProjectFileManager(MenuItem newMenuItem,
-                       MenuItem openMenuItem,
-                       MenuItem saveMenuItem,
-                       MenuItem saveAsMenuItem,
-                       MenuItem exitMenuItem,
-                       MenuItem undoMenuItem,
-                       MenuItem redoMenuItem,
-                       MenuBar menuBar,
-                       Supplier<SublyProjectSession> sessionSupplier,
-                       Supplier<SublyApplication> appSupplier,
-                       SubtitleTableManager subtitleManager,
-                       java.util.function.Consumer<Boolean> dirtySetter,
-                       Supplier<Boolean> dirtyFlagSupplier) {
+    public ProjectFileManager(MenuItem newMenuItem,
+                              MenuItem openMenuItem,
+                              MenuItem saveMenuItem,
+                              MenuItem saveAsMenuItem,
+                              MenuItem exitMenuItem,
+                              MenuItem undoMenuItem,
+                              MenuItem redoMenuItem,
+                              MenuBar menuBar,
+                              Supplier<SublyProjectSession> sessionSupplier,
+                              Supplier<SublyApplication> appSupplier,
+                              SubtitleTableManager subtitleManager,
+                              java.util.function.Consumer<Boolean> dirtySetter,
+                              Supplier<Boolean> dirtyFlagSupplier) {
         this.newMenuItem = newMenuItem;
         this.openMenuItem = openMenuItem;
         this.saveMenuItem = saveMenuItem;
@@ -65,7 +65,7 @@ class ProjectFileManager {
         this.dirtyFlagSupplier = dirtyFlagSupplier;
     }
 
-    void initialize() {
+    public void initialize() {
         wireMenuActions();
         setupEditMenu();
         setupAccelerators();
@@ -104,7 +104,7 @@ class ProjectFileManager {
         exitMenuItem.setOnAction(e -> requestExit());
     }
 
-    void refreshActions() {
+    public void refreshActions() {
         SublyProjectSession session = sessionSupplier.get();
         if (session == null) {
             saveMenuItem.setDisable(true);

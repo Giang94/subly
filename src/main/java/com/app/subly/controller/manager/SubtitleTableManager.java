@@ -16,7 +16,7 @@ import javafx.scene.input.*;
 
 import java.util.*;
 
-class SubtitleTableManager {
+public class SubtitleTableManager {
 
     private final TableView<Subtitle> table;
     private final TableColumn<Subtitle, Integer> indexColumn;
@@ -33,7 +33,7 @@ class SubtitleTableManager {
     private EditHistory history;
     private PasteManager pasteManager;
 
-    SubtitleTableManager(TableView<Subtitle> table,
+    public SubtitleTableManager(TableView<Subtitle> table,
                          TableColumn<Subtitle, Integer> indexColumn,
                          TableColumn<Subtitle, String> primaryColumn,
                          TableColumn<Subtitle, String> secondaryColumn,
@@ -55,7 +55,7 @@ class SubtitleTableManager {
         this.sessionSupplier = sessionSupplier;
     }
 
-    void initialize() {
+    public void initialize() {
         setupTableStructure();
         setupNavigation();
         setupHistoryAndPaste();
@@ -299,7 +299,7 @@ class SubtitleTableManager {
         e.consume();
     }
 
-    void onSessionSet() {
+    public void onSessionSet() {
         var sess = sessionSupplier.get();
         if (sess == null) return;
         installPlaceholderPromotion();

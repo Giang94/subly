@@ -12,7 +12,7 @@ import javafx.stage.FileChooser;
 import java.io.File;
 import java.util.function.Supplier;
 
-class BackgroundSettingsManager {
+public class BackgroundSettingsManager {
 
     private final RadioButton bgTransparentRadio;
     private final RadioButton bgColorRadio;
@@ -27,17 +27,17 @@ class BackgroundSettingsManager {
     private final Runnable markDirty;
     private final Runnable onPreviewBackgroundChanged;
 
-    BackgroundSettingsManager(RadioButton bgTransparentRadio,
-                              RadioButton bgColorRadio,
-                              RadioButton bgImageRadio,
-                              ToggleGroup bgToggleGroup,
-                              ColorPicker bgColorPicker,
-                              Button chooseImageButton,
-                              TextField imagePathField,
-                              Supplier<SublyProjectSession> sessionSupplier,
-                              Supplier<com.app.subly.component.Projector> projectorSupplier,
-                              Runnable markDirty,
-                              Runnable onPreviewBackgroundChanged) {
+    public BackgroundSettingsManager(RadioButton bgTransparentRadio,
+                                     RadioButton bgColorRadio,
+                                     RadioButton bgImageRadio,
+                                     ToggleGroup bgToggleGroup,
+                                     ColorPicker bgColorPicker,
+                                     Button chooseImageButton,
+                                     TextField imagePathField,
+                                     Supplier<SublyProjectSession> sessionSupplier,
+                                     Supplier<com.app.subly.component.Projector> projectorSupplier,
+                                     Runnable markDirty,
+                                     Runnable onPreviewBackgroundChanged) {
         this.bgTransparentRadio = bgTransparentRadio;
         this.bgColorRadio = bgColorRadio;
         this.bgImageRadio = bgImageRadio;
@@ -52,7 +52,7 @@ class BackgroundSettingsManager {
 
     }
 
-    void initialize() {
+    public void initialize() {
         if (bgToggleGroup == null) {
             bgToggleGroup = new ToggleGroup();
             bgTransparentRadio.setToggleGroup(bgToggleGroup);
@@ -74,7 +74,7 @@ class BackgroundSettingsManager {
         });
     }
 
-    void onSessionSet() {
+    public void onSessionSet() {
         SublyProjectSession s = sessionSupplier.get();
         if (s == null) return;
         SublySettings settings = s.getSettings();
@@ -111,7 +111,7 @@ class BackgroundSettingsManager {
         }
     }
 
-    void applyBackground() {
+    public void applyBackground() {
         SublyProjectSession session = sessionSupplier.get();
         if (session == null) return;
         session.update(s -> {
