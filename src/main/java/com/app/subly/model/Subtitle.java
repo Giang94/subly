@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class Subtitle {
+
     private Integer id;
     private String primaryText;
     private String secondaryText;

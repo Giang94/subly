@@ -1,27 +1,26 @@
 package com.app.subly.controller;
 
 import com.app.subly.SublyApplication;
-import com.app.subly.component.SublyApplicationStage;
 import com.app.subly.component.*;
 import com.app.subly.model.*;
-import com.app.subly.persistence.SublyProjectFileManager;
+import com.app.subly.persistence.ProjectBuilders;
+import com.app.subly.persistence.SublyProjectIO;
 import com.app.subly.project.SublyProjectSession;
 import com.app.subly.utils.ColorConvertUtils;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.collections.FXCollections;
+import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
+import javafx.css.PseudoClass;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
-import javafx.scene.control.cell.TextFieldTableCell;
-import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyCodeCombination;
-import javafx.scene.input.KeyCombination;
-import javafx.scene.input.KeyEvent;
-import javafx.scene.layout.BackgroundFill;
+import javafx.scene.input.*;
+import javafx.scene.layout.HBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Text;
@@ -38,6 +37,7 @@ import java.util.List;
 
 public class ControlPanelController {
 
+    private static final String PROJECT_EXT = ".subly";
     private static final int MIN_FONT_SIZE = 24;
     private static final int MAX_FONT_SIZE = 240;
 
@@ -114,6 +114,12 @@ public class ControlPanelController {
     @FXML
     private MenuItem redoMenuItem;
 
+    // Handle chapters
+    @FXML
+    private ListView<Chapter> chapterListView;
+    @FXML
+    private Label chapterCountLabel;
+
     @FXML
     private void initialize() {
         configureCurrentSubtitleLabel();
@@ -125,34 +131,20 @@ public class ControlPanelController {
         backgroundControlsSetup();
 
         // Demo data + ensure trailing blank row
-        ObservableList<Subtitle> data = FXCollections.observableArrayList(
-                new Subtitle(1, "This line will be showed on screen", "This line is for translation")
-        );
+        ObservableList<Subtitle> data = FXCollections.observableArrayList(new Subtitle(1, "This line will be showed on screen", "This line is for translation"));
         subtitleTable.setItems(data);
         trailingRowPolicy.ensureTrailingBlankRow(subtitleTable);
 
         // History: refresh table + enforce trailing blank after undo/redo; mark dirty on any change
-        history = new EditHistory(
-                () -> {
-                    trailingRowPolicy.ensureTrailingBlankRow(subtitleTable);
-                    RowIndexer.renumber(subtitleTable.getItems());
-                    subtitleTable.refresh();
-                },
-                this::markDirty
-        );
+        history = new EditHistory(() -> {
+            trailingRowPolicy.ensureTrailingBlankRow(subtitleTable);
+            RowIndexer.renumber(subtitleTable.getItems());
+            subtitleTable.refresh();
+        }, this::markDirty);
 
         // Paste manager with undo
         // Paste manager records into shared history
-        pasteManager = new PasteManager(
-                subtitleTable,
-                primaryTextColumn,
-                secondaryTextColumn,
-                indexColumn,
-                () -> new Subtitle(subtitleTable.getItems().size() + 1, "", ""),
-                () -> trailingRowPolicy.ensureTrailingBlankRow(subtitleTable),
-                this::markDirty,
-                history
-        );
+        pasteManager = new PasteManager(subtitleTable, primaryTextColumn, secondaryTextColumn, indexColumn, () -> new Subtitle(subtitleTable.getItems().size() + 1, "", ""), () -> trailingRowPolicy.ensureTrailingBlankRow(subtitleTable), this::markDirty, history);
         pasteManager.install();
 
         // Update projector and current label on selection
@@ -167,7 +159,56 @@ public class ControlPanelController {
             currentSubtitleLabel.setText(data.getFirst().getPrimaryText().replace("\\n", "\n"));
         }
 
-        Platform.runLater(this::ensureInitialChapter);
+        setupSubtitleColumns();
+    }
+
+    private void setupSubtitleColumns() {
+        // Ensure ONLY these three columns remain
+        subtitleTable.getColumns().setAll(indexColumn, primaryTextColumn, secondaryTextColumn);
+        subtitleTable.setTableMenuButtonVisible(false);
+        subtitleTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+
+        // Fixed (or near fixed) width for index column
+        indexColumn.setText("#");
+        indexColumn.setMinWidth(30);
+        indexColumn.setPrefWidth(30);
+        indexColumn.setMaxWidth(30);
+        indexColumn.setResizable(false);
+
+        // Allow user resizing on text columns
+        primaryTextColumn.setResizable(true);
+        secondaryTextColumn.setResizable(true);
+
+        // One‑time equal sizing after layout
+        subtitleTable.sceneProperty().addListener((o, ov, nv) -> {
+            if (nv != null) {
+                Platform.runLater(this::applyInitialEqualSubtitleWidths);
+            }
+        });
+        subtitleTable.widthProperty().addListener((obs, o, w) -> {
+            if (w.doubleValue() > 0) {
+                applyInitialEqualSubtitleWidths();
+            }
+        });
+    }
+
+    private void applyInitialEqualSubtitleWidths() {
+        double total = subtitleTable.getWidth();
+        if (total <= 0) return;
+
+        double indexW = indexColumn.getWidth();
+        if (indexW <= 0) indexW = indexColumn.getPrefWidth();
+
+        double remaining = Math.max(0, total - indexW);
+        double half = remaining / 2.0;
+
+        // Only set preferred; leave min/max flexible so user can resize
+        primaryTextColumn.setPrefWidth(half);
+        secondaryTextColumn.setPrefWidth(half);
+
+        // Sensible minimums
+        primaryTextColumn.setMinWidth(80);
+        secondaryTextColumn.setMinWidth(80);
     }
 
     private void backgroundControlsSetup() {
@@ -190,10 +231,7 @@ public class ControlPanelController {
 
         FileChooser chooser = new FileChooser();
         chooser.setTitle("Choose Background Image");
-        chooser.getExtensionFilters().addAll(
-                new FileChooser.ExtensionFilter("Image Files", "*.png", "*.jpg", "*.jpeg", "*.bmp", "*.gif"),
-                new FileChooser.ExtensionFilter("All Files", "*.*")
-        );
+        chooser.getExtensionFilters().addAll(new FileChooser.ExtensionFilter("Image Files", "*.png", "*.jpg", "*.jpeg", "*.bmp", "*.gif"), new FileChooser.ExtensionFilter("All Files", "*.*"));
 
         File file = chooser.showOpenDialog(owner);
         if (file != null) {
@@ -212,8 +250,7 @@ public class ControlPanelController {
                 s.setProjectorImageUri(null); // clear any previous image
             } else if (bgColorRadio != null && bgColorRadio.isSelected()) {
                 s.setBackgroundType(BackgroundType.SOLID_COLOR);
-                Color c = (bgColorPicker != null && bgColorPicker.getValue() != null)
-                        ? bgColorPicker.getValue() : Color.BLACK;
+                Color c = (bgColorPicker != null && bgColorPicker.getValue() != null) ? bgColorPicker.getValue() : Color.BLACK;
                 s.setProjectorColor(ColorConvertUtils.toHexString(c));
                 s.setProjectorImageUri(null); // clear any previous image
             } else if (bgImageRadio != null && bgImageRadio.isSelected()) {
@@ -287,22 +324,75 @@ public class ControlPanelController {
         if (styleBinder != null) styleBinder.rebind(session, projector);
     }
 
+    private boolean isPlaceholder(Chapter ch) {
+        if (ch == null || chapterListView == null) return false;
+        int idx = chapterListView.getItems().indexOf(ch);
+        return (ch.getTitle() == null || ch.getTitle().isBlank()) && idx == chapterListView.getItems().size() - 1;
+    }
+
+    private void installSubtitleTablePlaceholderPromotion() {
+        if (subtitleTable == null) return;
+
+        Runnable promoteIfNeeded = () -> {
+            if (session == null) return;
+            Chapter ch = session.getSelectedChapter();
+            if (ch != null && isPlaceholder(ch)) {
+                boolean promoted = session.promotePlaceholderForSubtitleEdit();
+                if (promoted) {
+                    chapterListView.refresh();
+                }
+            }
+        };
+
+        // First mouse interaction
+        subtitleTable.addEventFilter(MouseEvent.MOUSE_PRESSED, e -> promoteIfNeeded.run());
+
+        // Keyboard interaction (typing)
+        subtitleTable.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
+            if (e.getCode() == KeyCode.ESCAPE || e.getCode() == KeyCode.TAB) return;
+            promoteIfNeeded.run();
+        });
+    }
+
     public void setSession(SublyProjectSession session) {
         this.session = session;
 
-        if (styleBinder == null) {
-            // Pass null for the old checkbox (now replaced by radio buttons)
-            styleBinder = new StyleToolbarBinder(
-                    MIN_FONT_SIZE, MAX_FONT_SIZE,
-                    fontSizeField, fontSizeDownButton, fontSizeUpButton,
-                    textColorPicker,
-                    this::currentFontSize,
-                    this::applySettingsToProjector,
-                    this::markDirty
-            );
+        if (chapterListView != null) {
+            chapterListView.setItems(session.getChapters());
+            installChapterInlineRename();
+            session.ensureAtLeastOneChapter(); // now also ensures placeholder
+
+            if (chapterListView.getSelectionModel().getSelectedIndex() < 0 && !chapterListView.getItems().isEmpty()) {
+                chapterListView.getSelectionModel().select(0);
+                session.setSelectedChapterIndex(0);
+                Chapter ch = session.getSelectedChapter();
+                if (ch != null && !isPlaceholder(ch)) reloadSubtitleTable(ch.getSubtitles());
+            }
+
+            chapterListView.getSelectionModel().selectedIndexProperty().addListener((o, ov, nv) -> {
+                if (ov != null && ov.intValue() >= 0) {
+                    Chapter prev = session.getSelectedChapter();
+                    if (prev != null && !isPlaceholder(prev)) {
+                        session.syncCurrentChapterFromTable(subtitleTable, trailingRowPolicy);
+                    }
+                }
+                int idx = (nv == null) ? -1 : nv.intValue();
+                session.setSelectedChapterIndex(idx);
+                Chapter ch = session.getSelectedChapter();
+                if (ch != null && !isPlaceholder(ch)) {
+                    reloadSubtitleTable(ch.getSubtitles().isEmpty() ? java.util.List.of(new Subtitle(1, "", "")) : ch.getSubtitles());
+                } else {
+                    // Placeholder selected: show empty table (but preserve current unsynced data)
+                    subtitleTable.setItems(FXCollections.observableArrayList());
+                    trailingRowPolicy.ensureTrailingBlankRow(subtitleTable);
+                }
+            });
         }
 
-        // Reflect current settings into the radio group and color picker
+        if (styleBinder == null) {
+            styleBinder = new StyleToolbarBinder(MIN_FONT_SIZE, MAX_FONT_SIZE, fontSizeField, fontSizeDownButton, fontSizeUpButton, textColorPicker, this::currentFontSize, this::applySettingsToProjector, this::markDirty);
+        }
+
         SublySettings settings = (session != null) ? session.getSettings() : null;
         if (settings != null) {
             if (settings.isProjectorTransparent()) {
@@ -315,7 +405,6 @@ public class ControlPanelController {
             }
         }
 
-        // Propagate radio/color changes to session/projector
         if (bgToggleGroup != null) {
             bgToggleGroup.selectedToggleProperty().addListener((obs, o, n) -> applyBackgroundChange());
         }
@@ -326,9 +415,13 @@ public class ControlPanelController {
         }
 
         styleBinder.rebind(session, projector);
-
-        // Apply initial background based on the current selection
         applyBackgroundChange();
+        installSubtitleTablePlaceholderPromotion();
+        // Handle context menu on Chapter list view
+        setupChapterContextMenuActions();
+        updateChapterContextMenuState();
+        chapterListView.getSelectionModel().selectedIndexProperty().addListener((o, ov, nv) -> updateChapterContextMenuState());
+        session.getChapters().addListener((ListChangeListener<Chapter>) c -> updateChapterContextMenuState());
     }
 
     private void setupTableBasics() {
@@ -344,13 +437,10 @@ public class ControlPanelController {
                     subtitleTable.getItems().add(s);
                     // Record: remove last row (undo) / add one row (redo)
                     if (history != null) {
-                        history.push(EditHistory.of(
-                                () -> {
-                                    if (!subtitleTable.getItems().isEmpty())
-                                        subtitleTable.getItems().remove(subtitleTable.getItems().size() - 1);
-                                },
-                                () -> subtitleTable.getItems().add(new Subtitle(subtitleTable.getItems().size() + 1, "", ""))
-                        ));
+                        history.push(EditHistory.of(() -> {
+                            if (!subtitleTable.getItems().isEmpty())
+                                subtitleTable.getItems().remove(subtitleTable.getItems().size() - 1);
+                        }, () -> subtitleTable.getItems().add(new Subtitle(subtitleTable.getItems().size() + 1, "", ""))));
                     }
                     subtitleTable.getSelectionModel().select(s);
                     subtitleTable.getFocusModel().focus(last + 1, primaryTextColumn);
@@ -407,8 +497,7 @@ public class ControlPanelController {
                                         subtitleTable.getItems().remove(at);
                                     }
                                 }
-                            }
-                    ));
+                            }));
                     history.push(ce);
                 }
                 e.consume();
@@ -417,7 +506,7 @@ public class ControlPanelController {
 
         // Cell factories
         primaryTextColumn.setCellFactory(col -> new MultilineTableCell());
-        secondaryTextColumn.setCellFactory(TextFieldTableCell.forTableColumn());
+        secondaryTextColumn.setCellFactory(col -> new MultilineTableCell());
         primaryTextColumn.setEditable(true);
         secondaryTextColumn.setEditable(true);
 
@@ -434,16 +523,13 @@ public class ControlPanelController {
                 if (projector != null) projector.setText(text);
             }
             if (history != null) {
-                history.push(EditHistory.of(
-                        () -> {
-                            if (rowIndex < subtitleTable.getItems().size())
-                                subtitleTable.getItems().get(rowIndex).setPrimaryText(oldV);
-                        },
-                        () -> {
-                            if (rowIndex < subtitleTable.getItems().size())
-                                subtitleTable.getItems().get(rowIndex).setPrimaryText(newV);
-                        }
-                ));
+                history.push(EditHistory.of(() -> {
+                    if (rowIndex < subtitleTable.getItems().size())
+                        subtitleTable.getItems().get(rowIndex).setPrimaryText(oldV);
+                }, () -> {
+                    if (rowIndex < subtitleTable.getItems().size())
+                        subtitleTable.getItems().get(rowIndex).setPrimaryText(newV);
+                }));
             }
             trailingRowPolicy.ensureTrailingBlankRow(subtitleTable);
             markDirty();
@@ -454,25 +540,180 @@ public class ControlPanelController {
             String newV = ev.getNewValue();
             ev.getRowValue().setSecondaryText(newV);
             if (history != null) {
-                history.push(EditHistory.of(
-                        () -> {
-                            if (rowIndex < subtitleTable.getItems().size())
-                                subtitleTable.getItems().get(rowIndex).setSecondaryText(oldV);
-                        },
-                        () -> {
-                            if (rowIndex < subtitleTable.getItems().size())
-                                subtitleTable.getItems().get(rowIndex).setSecondaryText(newV);
-                        }
-                ));
+                history.push(EditHistory.of(() -> {
+                    if (rowIndex < subtitleTable.getItems().size())
+                        subtitleTable.getItems().get(rowIndex).setSecondaryText(oldV);
+                }, () -> {
+                    if (rowIndex < subtitleTable.getItems().size())
+                        subtitleTable.getItems().get(rowIndex).setSecondaryText(newV);
+                }));
             }
             trailingRowPolicy.ensureTrailingBlankRow(subtitleTable);
             markDirty();
         });
 
         // Value factories
-        indexColumn.setCellValueFactory(cd -> new javafx.beans.property.SimpleIntegerProperty(cd.getValue().getId()).asObject());
+        indexColumn.setCellValueFactory(cd -> {
+            Integer id = cd.getValue().getId();
+            if (id == null) {
+                // Fallback: compute position (1-based). Avoid -1 if not found.
+                int pos = subtitleTable.getItems().indexOf(cd.getValue());
+                int safe = (pos >= 0 ? pos + 1 : 0);
+                return new javafx.beans.property.SimpleIntegerProperty(safe).asObject();
+            }
+            return new javafx.beans.property.SimpleIntegerProperty(id).asObject();
+        });
         primaryTextColumn.setCellValueFactory(cd -> new javafx.beans.property.SimpleStringProperty(cd.getValue().getPrimaryText()));
         secondaryTextColumn.setCellValueFactory(cd -> new javafx.beans.property.SimpleStringProperty(cd.getValue().getSecondaryText()));
+    }
+
+    private void installChapterInlineRename() {
+        chapterListView.setEditable(true);
+        PseudoClass placeholderPc = PseudoClass.getPseudoClass("placeholder-chapter");
+
+        chapterListView.setCellFactory(lv -> new ListCell<>() {
+            private TextField editor;
+            private String oldTitle;
+
+            {
+                // Single click on placeholder starts edit; double-click continues to work for normal rows
+                addEventFilter(MouseEvent.MOUSE_CLICKED, e -> {
+                    Chapter it = getItem();
+                    if (e.getClickCount() == 1 && it != null && isPlaceholder(it) && !isEditing()) {
+                        startEdit();
+                        e.consume();
+                    } else if (e.getClickCount() == 2 && it != null && !isEditing()) {
+                        startEdit();
+                        e.consume();
+                    }
+                });
+            }
+
+            @Override
+            protected void updateItem(Chapter item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                    setGraphic(null);
+                    pseudoClassStateChanged(placeholderPc, false);
+                    return;
+                }
+                boolean placeholder = isPlaceholder(item);
+                pseudoClassStateChanged(placeholderPc, placeholder);
+
+                if (isEditing()) {
+                    setText(null);
+                    setGraphic(editor);
+                    return;
+                }
+
+                if (placeholder) {
+                    setText(null);
+                    setGraphic(buildPlaceholderGraphic());
+                } else {
+                    setText(item.getTitle());
+                    setGraphic(null);
+                }
+            }
+
+            private javafx.scene.Node buildPlaceholderGraphic() {
+                Label plus = new Label("+");
+                plus.setStyle("-fx-font-weight: bold; -fx-text-fill: -fx-accent; -fx-font-size: 14;");
+                Label hint = new Label(" Add chapter");
+                hint.setStyle("-fx-text-fill: -fx-text-inner-color; -fx-opacity: 0.65; -fx-font-style: italic;");
+                HBox box = new HBox(plus, hint);
+                box.setSpacing(2);
+                box.setPadding(new Insets(2, 4, 2, 4));
+                Tooltip.install(box, new Tooltip("Click to create a new chapter"));
+                return box;
+            }
+
+            @Override
+            public void startEdit() {
+                if (getItem() == null) return;
+                super.startEdit();
+                if (editor == null) createEditor();
+                oldTitle = getItem().getTitle();
+                editor.setText(oldTitle == null ? "" : oldTitle);
+                setText(null);
+                setGraphic(editor);
+                editor.requestFocus();
+                editor.selectAll();
+            }
+
+            @Override
+            public void cancelEdit() {
+                super.cancelEdit();
+                Chapter it = getItem();
+                if (it == null) {
+                    setText(null);
+                    setGraphic(null);
+                } else if (isPlaceholder(it)) {
+                    setText(null);
+                    setGraphic(buildPlaceholderGraphic());
+                } else {
+                    setText(it.getTitle());
+                    setGraphic(null);
+                }
+            }
+
+            @Override
+            public void commitEdit(Chapter newValue) {
+                super.commitEdit(newValue);
+                if (isPlaceholder(newValue)) {
+                    setText(null);
+                    setGraphic(buildPlaceholderGraphic());
+                } else {
+                    setText(newValue.getTitle());
+                    setGraphic(null);
+                }
+            }
+
+            private void createEditor() {
+                editor = new TextField();
+                editor.setOnAction(e -> commitOrReclassify());
+                editor.focusedProperty().addListener((o, was, now) -> {
+                    if (!now) commitOrReclassify();
+                });
+                editor.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
+                    if (e.getCode() == KeyCode.ESCAPE) {
+                        cancelEdit();
+                        e.consume();
+                    }
+                });
+            }
+
+            private void commitOrReclassify() {
+                Chapter ch = getItem();
+                if (ch == null) return;
+                String txt = editor.getText() == null ? "" : editor.getText().trim();
+                boolean wasPlaceholder = isPlaceholder(ch);
+
+                if (txt.isBlank()) {
+                    // keep placeholder (or revert if normal)
+                    if (!wasPlaceholder) {
+                        ch.setTitle(oldTitle);
+                    }
+                    cancelEdit();
+                    return;
+                }
+
+                if (!txt.equals(ch.getTitle())) {
+                    ch.setTitle(txt);
+                    if (session != null) session.touch();
+                }
+
+                if (wasPlaceholder) {
+                    if (ch.getSubtitles().isEmpty()) {
+                        ch.getSubtitles().add(new Subtitle(1, "", ""));
+                    }
+                    session.ensurePlaceholderChapter();
+                }
+
+                commitEdit(ch);
+                chapterListView.refresh();
+            }
+        });
     }
 
     private void setupNavigation() {
@@ -541,85 +782,124 @@ public class ControlPanelController {
     }
 
     private void openProject() {
-        FileChooser fileChooser = new FileChooser();
-        fileChooser.setTitle("Open Subtitle File");
-        fileChooser.getExtensionFilters().addAll(
-                new FileChooser.ExtensionFilter("Subtitle Files", "*.subly")
-        );
+        if (!confirmNewWithUnsavedCheck()) return;
+
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle("Open Project");
+        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Subly Project (*" + PROJECT_EXT + ")", "*" + PROJECT_EXT));
 
         Stage stage = new SublyApplicationStage();
-        File selectedFile = fileChooser.showOpenDialog(stage);
-        if (selectedFile != null) {
-            System.out.println("Selected file: " + selectedFile.getAbsolutePath());
-            try {
-                SublyProjectFileManager manager = new SublyProjectFileManager();
-                SublyProjectFile projectFile = manager.loadProject(selectedFile);
+        File selected = chooser.showOpenDialog(stage);
+        if (selected == null) return;
 
-                if (session != null) {
-                    session.setProjectFile(selectedFile);
+        try {
+            var project = SublyProjectIO.load(selected.toPath());
+            if (session != null) {
+                session.setProjectFile(selected);
+                if (project.getSettings() != null) {
+                    app.updateSetting(project.getSettings());
+                    session.setSettings(project.getSettings());
                 }
-
-                // Update app title/settings and table
-                app.updateSetting(projectFile.getSettings());
-                app.updateTitle(projectFile.getFileName());
-                reloadSubtitleTable(projectFile.getChapters().get(0).getSubtitles());
-
-                // Read settings from file
-                SublySettings loaded = projectFile.getSettings();
-                final int sizeToApply = Math.clamp(loaded.getSubtitleFontSize(), MIN_FONT_SIZE, MAX_FONT_SIZE);
-                final Color textFx = ColorConvertUtils.toJavaFxColor(loaded.getSubtitleColor());
-                final boolean transparent = loaded.isProjectorTransparent();
-                final Color bgFx = ColorConvertUtils.toJavaFxColor(loaded.getProjectorColor());
-
-                // Reflect in UI
-                if (fontSizeField != null) fontSizeField.setText(String.valueOf(sizeToApply));
-                if (textColorPicker != null) textColorPicker.setValue(textFx);
-                if (bgColorPicker != null) {
-                    Color pickerBg = transparent
-                            ? new Color(bgFx.getRed(), bgFx.getGreen(), bgFx.getBlue(), 0.0)
-                            : bgFx;
-                    bgColorPicker.setValue(pickerBg);
-                }
-
-                // Update session and apply to Projector
-                if (session != null) {
-                    session.update(s -> {
-                        s.setSubtitleFontSize(sizeToApply);
-                        s.setSubtitleColor(ColorConvertUtils.toHexString(textFx));
-                        s.setProjectorTransparent(transparent);
-                        if (!transparent) {
-                            s.setProjectorColor(ColorConvertUtils.toHexString(bgFx));
-                        }
-                    });
-                }
-                if (projector != null && session != null) {
-                    projector.applySettings(session.getSettings());
-                }
-
-                setDirty(false);
-                refreshActions();
-            } catch (IOException e) {
+                session.replaceAllChapters(project.getChapters());
             }
+
+            if (!session.getChapters().isEmpty()) {
+                session.ensureAllChapterIds();
+                chapterListView.getSelectionModel().select(0);
+                reloadSubtitleTable(session.getChapters().get(0).getSubtitles());
+            } else {
+                reloadSubtitleTable(java.util.List.of(new Subtitle(1, "", "")));
+            }
+
+            app.updateTitle(project.getFileName());
+            session.clearDirty();
+            setDirty(false);
+            refreshActions();
+        } catch (IOException ex) {
+            showIoError("Open Project Failed", ex);
         }
     }
 
     private void saveProject() {
-        SublyProjectFileManager manager = new SublyProjectFileManager();
-        manager.save(subtitleTable, session);
-        setDirty(false);
+        if (session == null) return;
+        session.ensureAllChapterIds();
+        session.syncCurrentChapterFromTable(subtitleTable, trailingRowPolicy);
+        File target = session.getProjectFile();
+        if (target == null) {
+            saveProjectAs();
+            return;
+        }
+        SublyProjectFile project = ProjectBuilders.fromUi(target.getName(), chapterListView, subtitleTable, session);
+        try {
+            SublyProjectIO.save(project, target.toPath());
+            app.updateTitle(project.getFileName());
+            session.clearDirty();
+            setDirty(false);
+            refreshActions();
+        } catch (IOException ex) {
+            showIoError("Save Project Failed", ex);
+        }
     }
 
     private void saveProjectAs() {
-        SublyProjectFileManager manager = new SublyProjectFileManager();
-        manager.saveAs(subtitleTable, session);
-        File f = (session != null) ? session.getProjectFile() : null;
-        if (f != null && f.exists()) setDirty(false);
+        if (session == null) return;
+        session.syncCurrentChapterFromTable(subtitleTable, trailingRowPolicy);
+        session.ensureAllChapterIds();
+
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle("Save Project");
+        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Subly Project (*" + PROJECT_EXT + ")", "*" + PROJECT_EXT));
+
+        File initial = session.getProjectFile();
+        if (initial != null && initial.getParentFile() != null) {
+            chooser.setInitialDirectory(initial.getParentFile());
+            chooser.setInitialFileName(stripExt(initial.getName()) + PROJECT_EXT);
+        } else {
+            chooser.setInitialFileName("Untitled" + PROJECT_EXT);
+        }
+
+        Stage stage = new SublyApplicationStage();
+        File chosen = chooser.showSaveDialog(stage);
+        if (chosen == null) return;
+
+        if (!chosen.getName().toLowerCase().endsWith(PROJECT_EXT)) {
+            chosen = new File(chosen.getParentFile(), chosen.getName() + PROJECT_EXT);
+        }
+
+        session.setProjectFile(chosen);
+        session.syncCurrentChapterFromTable(subtitleTable, trailingRowPolicy);
+
+        SublyProjectFile project = ProjectBuilders.fromUi(chosen.getName(), chapterListView, subtitleTable, session);
+        try {
+            SublyProjectIO.save(project, chosen.toPath());
+            app.updateTitle(project.getFileName());
+            session.clearDirty();
+            setDirty(false);
+            refreshActions();
+        } catch (IOException ex) {
+            showIoError("Save Project Failed", ex);
+        }
     }
 
     private void requestExit() {
         if (confirmExitWithUnsavedCheck()) {
             Platform.exit();
         }
+    }
+
+    private String stripExt(String name) {
+        if (name == null) return null;
+        int i = name.lastIndexOf('.');
+        return (i > 0) ? name.substring(0, i) : name;
+    }
+
+    // Simple error dialog (optional)
+    private void showIoError(String title, Exception ex) {
+        Alert a = new Alert(Alert.AlertType.ERROR);
+        a.setTitle(title);
+        a.setHeaderText(title);
+        a.setContentText(ex.getMessage());
+        a.showAndWait();
     }
 
     private void reloadSubtitleTable(List<Subtitle> subtitles) {
@@ -693,17 +973,12 @@ public class ControlPanelController {
     }
 
     private boolean attemptSaveForExit() {
-        SublyProjectFileManager manager = new SublyProjectFileManager();
-
-        // If we have a target, save; else prompt Save As
         File target = (session != null) ? session.getProjectFile() : null;
-        if (target != null && target.exists()) {
-            manager.save(subtitleTable, session);
+        if (target == null) {
+            saveProjectAs();
         } else {
-            manager.saveAs(subtitleTable, session);
+            saveProject();
         }
-
-        // Consider successful if a project file exists after save
         File f = (session != null) ? session.getProjectFile() : null;
         boolean success = (f != null && f.exists());
         if (success) setDirty(false);
@@ -779,13 +1054,7 @@ public class ControlPanelController {
                     style = "-fx-background-color: transparent;";
                 } else {
                     String cssUrl = uri.replace("\\", "/");
-                    style = String.format(
-                            "-fx-background-image: url(\"%s\"); " +
-                                    "-fx-background-size: cover; " +
-                                    "-fx-background-position: center center; " +
-                                    "-fx-background-repeat: no-repeat;",
-                            cssUrl
-                    );
+                    style = String.format("-fx-background-image: url(\"%s\"); " + "-fx-background-size: cover; " + "-fx-background-position: center center; " + "-fx-background-repeat: no-repeat;", cssUrl);
                 }
             }
             default -> style = "-fx-background-color: transparent;";
@@ -815,52 +1084,168 @@ public class ControlPanelController {
         }
     }
 
-    // Handle chapters
-    // Existing injections
-    @FXML private ListView<Chapter> chapterListView;
-    @FXML private Label chapterCountLabel;
+    // Chapter context menu and actions
+    @FXML
+    private MenuItem addChapterMenuItem;
+    @FXML
+    private MenuItem renameChapterMenuItem;
+    @FXML
+    private MenuItem deleteChapterMenuItem;
+    @FXML
+    private MenuItem moveUpMenuItem;
+    @FXML
+    private MenuItem moveDownMenuItem;
 
-    private void ensureInitialChapter() {
-        if (chapterListView == null) {
-            throw new IllegalStateException("chapterListView is not injected.");
+    private void setupChapterContextMenuActions() {
+        if (addChapterMenuItem != null) {
+            addChapterMenuItem.setOnAction(e -> onAddChapter());
         }
-        ObservableList<Chapter> items = chapterListView.getItems();
-        if (items.isEmpty()) {
-            Chapter chapter = createDefaultChapter(1);
-            items.add(chapter);
-            chapterListView.getSelectionModel().select(chapter);
-            updateChapterCount();
+        if (renameChapterMenuItem != null) {
+            renameChapterMenuItem.setOnAction(e -> onRenameChapter());
+        }
+        if (deleteChapterMenuItem != null) {
+            deleteChapterMenuItem.setOnAction(e -> onDeleteChapter());
+        }
+        if (moveUpMenuItem != null) {
+            moveUpMenuItem.setOnAction(e -> onMoveChapterUp());
+        }
+        if (moveDownMenuItem != null) {
+            moveDownMenuItem.setOnAction(e -> onMoveChapterDown());
+        }
+    }
 
-            ObservableList<Subtitle> data = FXCollections.observableArrayList();
-            data.add(new Subtitle(1, "", ""));
-        } else {
-            // Ensure the selected (or first) chapter has at least one empty subtitle
-            Chapter current = chapterListView.getSelectionModel().getSelectedItem();
-            if (current == null) current = items.get(0);
-            if (current.getSubtitles().isEmpty()) {
-                current.getSubtitles().add(newEmptySubtitle());
+    private void updateChapterContextMenuState() {
+        if (chapterListView == null || session == null) return;
+        int idx = chapterListView.getSelectionModel().getSelectedIndex();
+        Chapter ch = session.getSelectedChapter();
+        boolean hasSelection = idx >= 0 && ch != null;
+        boolean placeholder = hasSelection && isPlaceholder(ch);
+
+        if (addChapterMenuItem != null) addChapterMenuItem.setDisable(false);
+        if (renameChapterMenuItem != null) renameChapterMenuItem.setDisable(!hasSelection);
+        if (deleteChapterMenuItem != null) {
+            // Allow delete unless placeholder
+            deleteChapterMenuItem.setDisable(!hasSelection || placeholder);
+        }
+        if (moveUpMenuItem != null) {
+            moveUpMenuItem.setDisable(!hasSelection || placeholder || idx <= 0);
+        }
+        if (moveDownMenuItem != null) {
+            boolean disable = true;
+            if (hasSelection && !placeholder) {
+                if (idx < session.getChapters().size() - 1) {
+                    Chapter next = session.getChapters().get(idx + 1);
+                    disable = isPlaceholder(next);
+                }
             }
+            moveDownMenuItem.setDisable(disable);
         }
     }
 
-    private Chapter createDefaultChapter(int index) {
-        Chapter c = new Chapter();
-        c.setTitle("Chapter " + index);
-        c.getSubtitles().add(newEmptySubtitle());
-        return c;
+    private void onAddChapter() {
+        if (session == null) return;
+        Chapter c = session.addChapter();
+        chapterListView.getSelectionModel().select(c);
+        chapterListView.scrollTo(c);
+        chapterListView.refresh();
+        updateChapterContextMenuState();
     }
 
-    private Subtitle newEmptySubtitle() {
-        Subtitle s = new Subtitle();
-        // Adjust to your model's field names if different
-        s.setPrimaryText("");
-        s.setSecondaryText("");
-        return s;
+    private void onRenameChapter() {
+        if (chapterListView == null) return;
+        int idx = chapterListView.getSelectionModel().getSelectedIndex();
+        if (idx < 0) return;
+        chapterListView.edit(idx);
     }
 
-    private void updateChapterCount() {
-        if (chapterCountLabel != null) {
-            chapterCountLabel.setText(String.valueOf(chapterListView.getItems().size()));
+    private void onDeleteChapter() {
+        if (session == null) return;
+        int idx = chapterListView.getSelectionModel().getSelectedIndex();
+        if (idx < 0) return;
+        Chapter ch = session.getSelectedChapter();
+        if (ch == null || isPlaceholder(ch)) return;
+
+        // Sync edits of current chapter before deletion
+        session.syncCurrentChapterFromTable(subtitleTable, trailingRowPolicy);
+
+        // Remove selected chapter
+        session.getChapters().remove(idx);
+
+        // If now no real chapters remain, create a fresh one
+        long realCount = session.getChapters().stream().filter(c -> !isPlaceholder(c)).count();
+        if (realCount == 0) {
+            Chapter fresh = new Chapter();
+            fresh.setTitle("Chapter 1");
+            fresh.getSubtitles().add(new Subtitle(1, "", ""));
+            session.getChapters().add(0, fresh);
+            idx = 0;
         }
+
+        // Ensure placeholder chapter exists at end
+        session.ensurePlaceholderChapter();
+
+        // Adjust selection
+        int newIndex = Math.min(idx, session.getChapters().size() - 1);
+        if (newIndex >= 0) {
+            chapterListView.getSelectionModel().select(newIndex);
+            session.setSelectedChapterIndex(newIndex);
+        } else {
+            session.setSelectedChapterIndex(-1);
+        }
+
+        // Reload table for newly selected chapter (if real)
+        Chapter newCh = session.getSelectedChapter();
+        if (newCh != null && !isPlaceholder(newCh)) {
+            if (newCh.getSubtitles().isEmpty()) {
+                newCh.getSubtitles().add(new Subtitle(1, "", ""));
+            }
+            reloadSubtitleTable(newCh.getSubtitles());
+        } else {
+            subtitleTable.setItems(FXCollections.observableArrayList(new Subtitle(1, "", "")));
+            trailingRowPolicy.ensureTrailingBlankRow(subtitleTable);
+        }
+
+        chapterListView.refresh();
+        updateChapterContextMenuState();
+        session.touch();
+        markDirty();
+    }
+
+    private void onMoveChapterUp() {
+        if (session == null) return;
+        int idx = chapterListView.getSelectionModel().getSelectedIndex();
+        if (idx <= 0) return;
+        Chapter ch = session.getSelectedChapter();
+        if (ch == null || isPlaceholder(ch)) return;
+
+        ObservableList<Chapter> list = session.getChapters();
+        list.remove(idx);
+        list.add(idx - 1, ch);
+        chapterListView.getSelectionModel().select(idx - 1);
+        session.setSelectedChapterIndex(idx - 1);
+        session.touch();
+        chapterListView.refresh();
+        updateChapterContextMenuState();
+    }
+
+    private void onMoveChapterDown() {
+        if (session == null) return;
+        int idx = chapterListView.getSelectionModel().getSelectedIndex();
+        if (idx < 0) return;
+        Chapter ch = session.getSelectedChapter();
+        if (ch == null || isPlaceholder(ch)) return;
+
+        ObservableList<Chapter> list = session.getChapters();
+        if (idx >= list.size() - 1) return;
+        Chapter next = list.get(idx + 1);
+        if (isPlaceholder(next)) return; // cannot move below placeholder
+
+        list.remove(idx);
+        list.add(idx + 1, ch);
+        chapterListView.getSelectionModel().select(idx + 1);
+        session.setSelectedChapterIndex(idx + 1);
+        session.touch();
+        chapterListView.refresh();
+        updateChapterContextMenuState();
     }
 }

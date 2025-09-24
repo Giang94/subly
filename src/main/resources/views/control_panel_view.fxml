@@ -48,14 +48,14 @@
 
             <TextField fx:id="chapterSearchField" promptText="Filter chapters..."/>
 
-            <HBox spacing="6" alignment="CENTER_LEFT">
-                <Button fx:id="addChapterBtn" text="Add"/>
-                <Button fx:id="renameChapterBtn" text="Rename" disable="true"/>
-                <Button fx:id="deleteChapterBtn" text="Delete" disable="true"/>
-                <Region HBox.hgrow="ALWAYS"/>
-                <Button fx:id="moveChapterUpBtn" text="Up" disable="true"/>
-                <Button fx:id="moveChapterDownBtn" text="Down" disable="true"/>
-            </HBox>
+            <!--            <HBox spacing="6" alignment="CENTER_LEFT">-->
+            <!--                <Button fx:id="addChapterBtn" text="Add"/>-->
+            <!--                <Button fx:id="renameChapterBtn" text="Rename" disable="true"/>-->
+            <!--                <Button fx:id="deleteChapterBtn" text="Delete" disable="true"/>-->
+            <!--                <Region HBox.hgrow="ALWAYS"/>-->
+            <!--                <Button fx:id="moveChapterUpBtn" text="Up" disable="true"/>-->
+            <!--                <Button fx:id="moveChapterDownBtn" text="Down" disable="true"/>-->
+            <!--            </HBox>-->
 
             <ListView fx:id="chapterListView" VBox.vgrow="ALWAYS">
                 <placeholder>
@@ -66,11 +66,11 @@
                         <items>
                             <MenuItem fx:id="addChapterMenuItem" text="Add Chapter"/>
                             <SeparatorMenuItem/>
-                            <MenuItem fx:id="renameChapterMenuItem" text="Rename" disable="true"/>
-                            <MenuItem fx:id="deleteChapterMenuItem" text="Delete" disable="true"/>
+                            <MenuItem fx:id="renameChapterMenuItem" text="Rename"/>
+                            <MenuItem fx:id="deleteChapterMenuItem" text="Delete"/>
                             <SeparatorMenuItem/>
-                            <MenuItem fx:id="moveUpMenuItem" text="Move Up" disable="true"/>
-                            <MenuItem fx:id="moveDownMenuItem" text="Move Down" disable="true"/>
+                            <MenuItem fx:id="moveUpMenuItem" text="Move Up"/>
+                            <MenuItem fx:id="moveDownMenuItem" text="Move Down"/>
                         </items>
                     </ContextMenu>
                 </contextMenu>
