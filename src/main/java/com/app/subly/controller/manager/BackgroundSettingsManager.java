@@ -1,4 +1,4 @@
-package com.app.subly.controller.migrate;
+package com.app.subly.controller.manager;
 
 import com.app.subly.model.BackgroundType;
 import com.app.subly.model.SublySettings;

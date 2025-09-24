@@ -1,4 +1,4 @@
-package com.app.subly.controller.migrate;
+package com.app.subly.controller.manager;
 
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
@@ -12,7 +12,6 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
-import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextAlignment;
 

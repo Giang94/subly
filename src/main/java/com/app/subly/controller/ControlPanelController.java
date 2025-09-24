@@ -1,8 +1,9 @@
-package com.app.subly.controller.migrate;
+package com.app.subly.controller;
 
 import com.app.subly.SublyApplication;
 import com.app.subly.component.Projector;
 import com.app.subly.component.StyleToolbarBinder;
+import com.app.subly.controller.manager.*;
 import com.app.subly.model.Chapter;
 import com.app.subly.model.Subtitle;
 import com.app.subly.project.SublyProjectSession;

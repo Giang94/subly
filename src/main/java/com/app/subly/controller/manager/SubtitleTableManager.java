@@ -1,4 +1,4 @@
-package com.app.subly.controller.migrate;
+package com.app.subly.controller.manager;
 
 import com.app.subly.component.EditHistory;
 import com.app.subly.component.MultilineTableCell;
@@ -13,7 +13,6 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.control.*;
 import javafx.scene.input.*;
-import javafx.scene.paint.Color;
 
 import java.util.*;
 

@@ -1,4 +1,4 @@
-package com.app.subly.controller.migrate;
+package com.app.subly.controller.manager;
 
 import com.app.subly.model.Chapter;
 import com.app.subly.model.Subtitle;

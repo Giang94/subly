@@ -1,4 +1,4 @@
-package com.app.subly.controller.migrate;
+package com.app.subly.controller.manager;
 
 import com.app.subly.SublyApplication;
 import com.app.subly.component.EditHistory;
