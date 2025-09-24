@@ -9,6 +9,7 @@ module com.app.subly {
     opens com.app.subly.model to com.fasterxml.jackson.databind;
     opens com.app.subly to javafx.fxml;
     opens com.app.subly.controller to javafx.fxml;
+    opens com.app.subly.controller.migrate to javafx.fxml;
     opens com.app.subly.component to javafx.fxml;
     exports com.app.subly;
     exports com.app.subly.controller;
@@ -16,4 +17,5 @@ module com.app.subly {
     exports com.app.subly.persistence;
     exports com.app.subly.utils;
     exports com.app.subly.component;
+    exports com.app.subly.controller.migrate;
 }

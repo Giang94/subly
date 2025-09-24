@@ -35,7 +35,8 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
-public class ControlPanelController {
+@Deprecated
+public class DeprecatedControlPanelController {
 
     private static final String PROJECT_EXT = ".subly";
     private static final int MIN_FONT_SIZE = 24;
@@ -1028,7 +1029,6 @@ public class ControlPanelController {
 
     private void applySettingsToProjector(int size, Color textColor) {
         if (projector == null) return;
-        projector.setFontSize(size);
         projector.applySettings(session != null ? session.getSettings() : null);
     }
 

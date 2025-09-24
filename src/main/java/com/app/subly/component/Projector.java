@@ -132,7 +132,7 @@ public class Projector {
         // init resize
         resizeCover(bgView, image);
 
-        layout.getChildren().add(0, bgView);
+        layout.getChildren().addFirst(bgView);
         layout.setBackground(null);
         layout.setStyle("-fx-background-color: transparent;");
     }
@@ -154,27 +154,42 @@ public class Projector {
     }
 
     public void applySettings(SublySettings settings) {
+        applyLabelSettings(settings);
+
         switch (settings.getBackgroundType()) {
             case TRANSPARENT -> setTransparentBackground();
             case SOLID_COLOR -> setBackgroundColor(Color.web(settings.getProjectorColor()));
             case IMAGE -> setBackgroundImage(settings.getProjectorImageUri());
         }
+    }
 
+    public void applyLabelSettings(SublySettings settings) {
         label.setStyle(String.format("-fx-font-size: %spx; -fx-text-fill: %s;",
                 settings.getSubtitleFontSize(),
                 settings.getSubtitleColor()));
     }
 
-    public void setFontSize(int px) {
-        if (label == null) return;
-        String style = label.getStyle();
-        if (style == null) style = "";
-        style = style.replaceAll("(?i)\\s*-fx-font-size\\s*:\\s*[^;]+;?", "");
-        if (!style.isBlank() && !style.trim().endsWith(";")) style += ";";
-        label.setStyle(style + "-fx-font-size: " + px + "px;");
+    public Label getLabel() {
+        return label;
     }
 
-    public void setContentPadding(double top, double right, double bottom, double left) {
-        if (layout != null) layout.setPadding(new Insets(top, right, bottom, left));
+    public void setLabel(Label label) {
+        this.label = label;
+    }
+
+    public Stage getStage() {
+        return stage;
+    }
+
+    public void setStage(Stage stage) {
+        this.stage = stage;
+    }
+
+    public StackPane getLayout() {
+        return layout;
+    }
+
+    public void setLayout(StackPane layout) {
+        this.layout = layout;
     }
 }

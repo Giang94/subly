@@ -1,7 +1,7 @@
 package com.app.subly.component;
 
 import com.app.subly.SublyApplication;
-import com.app.subly.controller.ControlPanelController;
+import com.app.subly.controller.migrate.ControlPanelController;
 import com.app.subly.project.SublyProjectSession;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;

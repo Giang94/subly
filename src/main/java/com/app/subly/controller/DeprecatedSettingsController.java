@@ -1,4 +1,3 @@
-// java
 package com.app.subly.controller;
 
 import com.app.subly.component.Projector;
@@ -10,7 +9,8 @@ import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.paint.Color;
 
-public class SettingsController {
+@Deprecated
+public class DeprecatedSettingsController {
 
     @FXML
     private ToggleGroup bgGroup;

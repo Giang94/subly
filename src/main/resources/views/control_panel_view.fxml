@@ -3,9 +3,10 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
+<?import javafx.scene.image.ImageView?>
 <BorderPane xmlns="http://javafx.com/javafx/21"
             xmlns:fx="http://javafx.com/fxml/1"
-            fx:controller="com.app.subly.controller.ControlPanelController">
+            fx:controller="com.app.subly.controller.migrate.ControlPanelController">
 
     <top>
         <MenuBar fx:id="menuBar">
@@ -32,10 +33,7 @@
 
     <left>
         <VBox fx:id="chaptersPanel"
-              xmlns="http://javafx.com/javafx/21"
-              xmlns:fx="http://javafx.com/fxml/1"
               spacing="8" prefWidth="260" minWidth="220" maxWidth="400">
-
             <padding>
                 <Insets top="8" right="8" bottom="8" left="8"/>
             </padding>
@@ -43,19 +41,7 @@
             <HBox spacing="8" alignment="CENTER_LEFT">
                 <Label text="Chapters"/>
                 <Region HBox.hgrow="ALWAYS"/>
-                <ToggleButton fx:id="autoSortToggle" text="Auto-sort" selected="true"/>
             </HBox>
-
-            <TextField fx:id="chapterSearchField" promptText="Filter chapters..."/>
-
-            <!--            <HBox spacing="6" alignment="CENTER_LEFT">-->
-            <!--                <Button fx:id="addChapterBtn" text="Add"/>-->
-            <!--                <Button fx:id="renameChapterBtn" text="Rename" disable="true"/>-->
-            <!--                <Button fx:id="deleteChapterBtn" text="Delete" disable="true"/>-->
-            <!--                <Region HBox.hgrow="ALWAYS"/>-->
-            <!--                <Button fx:id="moveChapterUpBtn" text="Up" disable="true"/>-->
-            <!--                <Button fx:id="moveChapterDownBtn" text="Down" disable="true"/>-->
-            <!--            </HBox>-->
 
             <ListView fx:id="chapterListView" VBox.vgrow="ALWAYS">
                 <placeholder>
@@ -91,12 +77,48 @@
                 <Insets top="10" right="10" bottom="10" left="10"/>
             </padding>
 
-            <!-- Toolbar -->
+            <!-- Row 1: Subtitle preview centered, show screen toggle at right -->
+            <BorderPane>
+                <center>
+                    <StackPane fx:id="currentSubtitlePane"
+                               minHeight="60" prefHeight="60" maxHeight="60"
+                               maxWidth="Infinity"
+                               BorderPane.alignment="CENTER"
+                               style="-fx-border-color: -fx-box-border; -fx-padding: 8;">
+                        <children>
+                            <!-- Background image -->
+                            <ImageView fx:id="currentSubtitleImage"
+                                       preserveRatio="true"
+                                       smooth="true"
+                                       fitHeight="60"
+                                       StackPane.alignment="CENTER"/>
+
+                            <!-- Text on top -->
+                            <Label fx:id="currentSubtitleLabel"
+                                   text="Subtitle text"
+                                   style="-fx-text-fill: white; -fx-font-size: 12px;"
+                                   wrapText="true"
+                                   textAlignment="CENTER"
+                                   StackPane.alignment="CENTER"/>
+                        </children>
+                    </StackPane>
+                    <!--                    <Label fx:id="currentSubtitleLabel"-->
+                    <!--                           minHeight="60" prefHeight="60" maxHeight="60"-->
+                    <!--                           maxWidth="Infinity"-->
+                    <!--                           BorderPane.alignment="CENTER"-->
+                    <!--                           style="-fx-border-color: -fx-box-border; -fx-padding: 8; -fx-alignment: center;"/>-->
+                </center>
+                <right>
+                    <ToggleButton fx:id="toggleShowScreenButton"
+                                  text="Open Show Screen"
+                                  StackPane.alignment="TOP_RIGHT"
+                                  style="-fx-translate-x: 4; -fx-translate-y: 4;"/>
+
+                </right>
+            </BorderPane>
+
+            <!-- Row 2: Formatting / background toolbar -->
             <HBox spacing="8" alignment="CENTER_LEFT">
-                <ToggleButton fx:id="toggleShowScreenButton" text="Open Show Screen"/>
-
-                <Separator orientation="VERTICAL"/>
-
                 <Label text="Font size:"/>
                 <Button fx:id="fontSizeDownButton" text="-" minWidth="30"/>
                 <TextField fx:id="fontSizeField" promptText="Size" prefWidth="60"/>
@@ -110,21 +132,15 @@
                 <Separator orientation="VERTICAL"/>
 
                 <Label text="Background:"/>
-                <!-- ToggleGroup is created by controller -->
                 <RadioButton fx:id="bgTransparentRadio" text="Transparent" selected="true"/>
                 <RadioButton fx:id="bgColorRadio" text="Color"/>
                 <ColorPicker fx:id="bgColorPicker"/>
                 <RadioButton fx:id="bgImageRadio" text="Image"/>
                 <TextField fx:id="imagePathField" promptText="Image URI" prefWidth="180"/>
-                <Button fx:id="chooseImageButton" text="Browse..." onAction="#onChooseImage"/>
+                <Button fx:id="chooseImageButton" text="Browse..."/>
 
                 <Region HBox.hgrow="ALWAYS"/>
             </HBox>
-
-            <!-- Current subtitle preview -->
-            <Label fx:id="currentSubtitleLabel"
-                   minHeight="60" prefHeight="60" maxHeight="60"
-                   style="-fx-border-color: -fx-box-border; -fx-padding: 8;"/>
 
             <!-- Subtitle table -->
             <TableView fx:id="subtitleTable" VBox.vgrow="ALWAYS" editable="true">

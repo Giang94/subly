@@ -13,9 +13,9 @@ public class SublySettings implements Serializable {
 
     private BackgroundType backgroundType = BackgroundType.TRANSPARENT; // default
     private boolean projectorTransparent = true; // default
-    private String projectorColor = "33cc33";   // default black
-    private String subtitleColor = "FFFF00";    // default yellow
-    private Integer subtitleFontSize = 24;        // default size
+    private String projectorColor = "ffffff";   // default black
+    private String subtitleColor = "000000";    // default yellow
+    private Integer subtitleFontSize = 48;        // default size
     private String projectorImageUri;
 
     public String getProjectorImageUri() {

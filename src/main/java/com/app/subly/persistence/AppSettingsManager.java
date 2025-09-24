@@ -8,9 +8,9 @@ import java.util.Properties;
 public class AppSettingsManager {
 
     private static final String SETTINGS_FILE = "settings/app_settings.properties";
-    private static final String DEFAULT_PROJECTOR_COLOR = "33cc33";
-    private static final String DEFAULT_SUBTITLE_COLOR = "ffff00";
-    private static final Integer DEFAULT_SUBTITLE_FONT_SIZE = 24;
+    private static final String DEFAULT_PROJECTOR_COLOR = "ffffff";
+    private static final String DEFAULT_SUBTITLE_COLOR = "000000";
+    private static final Integer DEFAULT_SUBTITLE_FONT_SIZE = 48;
 
     public static SublySettings load() throws IOException {
         Properties properties = new Properties();

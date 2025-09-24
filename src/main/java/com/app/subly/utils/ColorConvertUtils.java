@@ -37,4 +37,13 @@ public class ColorConvertUtils {
     public static javafx.scene.paint.Color toJavaFxColor(String hexString) {
         return Color.web(hexString);
     }
+
+    public static String toRgb(javafx.scene.paint.Color c) {
+        int r = (int) Math.round(c.getRed() * 255);
+        int g = (int) Math.round(c.getGreen() * 255);
+        int b = (int) Math.round(c.getBlue() * 255);
+        double o = c.getOpacity();
+        if (o >= 1.0) return String.format("rgb(%d,%d,%d)", r, g, b);
+        return String.format("rgba(%d,%d,%d,%.3f)", r, g, b, o);
+    }
 }
