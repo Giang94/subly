@@ -7,6 +7,7 @@ import javafx.collections.ListChangeListener;
 import javafx.css.PseudoClass;
 import javafx.geometry.Insets;
 import javafx.scene.control.*;
+import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
@@ -15,6 +16,10 @@ import javafx.scene.layout.HBox;
 import java.util.function.Supplier;
 
 public class ChapterManager {
+
+    private static final String UNIFIED_SELECTION_STYLE =
+            "-fx-selection-bar: #b4dcff; -fx-selection-bar-non-focused: #b4dcff;";
+
 
     private final ListView<Chapter> chapterListView;
     private final Label chapterCountLabel;
@@ -27,6 +32,31 @@ public class ChapterManager {
     private final Supplier<SublyProjectSession> sessionSupplier;
     private final SubtitleTableManager subtitleManager;
     private final Runnable markDirty;
+
+    private boolean lockFiltersInstalled = false;
+    private boolean chapterStructureLocked = false;
+
+    private final javafx.event.EventHandler<ContextMenuEvent> lockContextFilter =
+            e -> {
+                if (chapterStructureLocked) e.consume();
+            };
+    private final javafx.event.EventHandler<KeyEvent> lockKeyFilter =
+            e -> {
+                if (!chapterStructureLocked) return;
+                KeyCode c = e.getCode();
+                if (c == KeyCode.DELETE || c == KeyCode.F2
+                        || (c == KeyCode.N && e.isControlDown())
+                        || (c == KeyCode.R && e.isControlDown())
+                        || (c == KeyCode.UP && e.isAltDown())
+                        || (c == KeyCode.DOWN && e.isAltDown())) {
+                    e.consume();
+                }
+            };
+    private final javafx.event.EventHandler<MouseEvent> lockMouseFilter =
+            e -> {
+                if (!chapterStructureLocked) return;
+                if (e.getClickCount() > 1) e.consume();
+            };
 
     public ChapterManager(ListView<Chapter> chapterListView,
                           Label chapterCountLabel,
@@ -52,6 +82,16 @@ public class ChapterManager {
 
     public void initialize() {
         setupContextActions();
+        applyUnifiedSelectionColors(chapterListView);
+    }
+
+    private void applyUnifiedSelectionColors(javafx.scene.control.Control control) {
+        if (control == null) return;
+        if (control.getProperties().get("unifiedSelectionColorsInstalled") == null) {
+            String existing = control.getStyle();
+            control.setStyle((existing == null || existing.isBlank() ? "" : existing + ";") + UNIFIED_SELECTION_STYLE);
+            control.getProperties().put("unifiedSelectionColorsInstalled", Boolean.TRUE);
+        }
     }
 
     public void onSessionSet() {
@@ -68,9 +108,35 @@ public class ChapterManager {
                 subtitleManager.reloadSubtitles(ch.getSubtitles());
             }
         }
-        chapterListView.getSelectionModel().selectedIndexProperty().addListener((o, ov, nv) -> handleChapterChange(ov, nv));
+        chapterListView.getSelectionModel().selectedIndexProperty()
+                .addListener((o, ov, nv) -> handleChapterChange(ov, nv));
         session.getChapters().addListener((ListChangeListener<Chapter>) c -> updateContextMenuState());
         updateContextMenuState();
+        applyLockFilters();
+    }
+
+    public void setChapterStructureLocked(boolean locked) {
+        if (this.chapterStructureLocked == locked) return;
+        this.chapterStructureLocked = locked;
+        applyLockState();
+    }
+
+    public boolean isChapterStructureLocked() {
+        return chapterStructureLocked;
+    }
+
+    private void applyLockState() {
+        applyLockFilters();
+        updateContextMenuState();
+        if (chapterStructureLocked) chapterListView.edit(-1);
+    }
+
+    private void applyLockFilters() {
+        if (chapterListView == null || lockFiltersInstalled) return;
+        chapterListView.addEventFilter(ContextMenuEvent.CONTEXT_MENU_REQUESTED, lockContextFilter);
+        chapterListView.addEventFilter(KeyEvent.KEY_PRESSED, lockKeyFilter);
+        chapterListView.addEventFilter(MouseEvent.MOUSE_CLICKED, lockMouseFilter);
+        lockFiltersInstalled = true;
     }
 
     private void handleChapterChange(Number prev, Number next) {
@@ -86,9 +152,7 @@ public class ChapterManager {
         session.setSelectedChapterIndex(idx);
         Chapter ch = session.getSelectedChapter();
         if (ch != null && !isPlaceholder(ch)) {
-            if (ch.getSubtitles().isEmpty()) {
-                ch.getSubtitles().add(new Subtitle(1, "", ""));
-            }
+            if (ch.getSubtitles().isEmpty()) ch.getSubtitles().add(new Subtitle(1, "", ""));
             subtitleManager.reloadSubtitles(ch.getSubtitles());
         } else {
             subtitleManager.reloadSubtitles(java.util.List.of(new Subtitle(1, "", "")));
@@ -114,6 +178,7 @@ public class ChapterManager {
     }
 
     private void addChapter() {
+        if (chapterStructureLocked) return;
         SublyProjectSession s = sessionSupplier.get();
         if (s == null) return;
         Chapter c = s.addChapter();
@@ -125,11 +190,13 @@ public class ChapterManager {
     }
 
     private void renameChapter() {
+        if (chapterStructureLocked) return;
         int idx = chapterListView.getSelectionModel().getSelectedIndex();
         if (idx >= 0) chapterListView.edit(idx);
     }
 
     private void deleteChapter() {
+        if (chapterStructureLocked) return;
         SublyProjectSession session = sessionSupplier.get();
         if (session == null) return;
         int idx = chapterListView.getSelectionModel().getSelectedIndex();
@@ -167,6 +234,7 @@ public class ChapterManager {
     }
 
     private void moveChapterUp() {
+        if (chapterStructureLocked) return;
         SublyProjectSession session = sessionSupplier.get();
         if (session == null) return;
         int idx = chapterListView.getSelectionModel().getSelectedIndex();
@@ -185,6 +253,7 @@ public class ChapterManager {
     }
 
     private void moveChapterDown() {
+        if (chapterStructureLocked) return;
         SublyProjectSession session = sessionSupplier.get();
         if (session == null) return;
         int idx = chapterListView.getSelectionModel().getSelectedIndex();
@@ -206,6 +275,15 @@ public class ChapterManager {
     }
 
     private void updateContextMenuState() {
+        if (chapterStructureLocked) {
+            if (addChapterMenuItem != null) addChapterMenuItem.setDisable(true);
+            if (renameChapterMenuItem != null) renameChapterMenuItem.setDisable(true);
+            if (deleteChapterMenuItem != null) deleteChapterMenuItem.setDisable(true);
+            if (moveUpMenuItem != null) moveUpMenuItem.setDisable(true);
+            if (moveDownMenuItem != null) moveDownMenuItem.setDisable(true);
+            return;
+        }
+
         SublyProjectSession session = sessionSupplier.get();
         if (session == null) return;
         int idx = chapterListView.getSelectionModel().getSelectedIndex();
@@ -214,7 +292,7 @@ public class ChapterManager {
         boolean placeholder = hasSelection && isPlaceholder(ch);
 
         if (addChapterMenuItem != null) addChapterMenuItem.setDisable(false);
-        if (renameChapterMenuItem != null) renameChapterMenuItem.setDisable(!hasSelection);
+        if (renameChapterMenuItem != null) renameChapterMenuItem.setDisable(!hasSelection || placeholder);
         if (deleteChapterMenuItem != null) deleteChapterMenuItem.setDisable(!hasSelection || placeholder);
         if (moveUpMenuItem != null) moveUpMenuItem.setDisable(!hasSelection || placeholder || idx <= 0);
         if (moveDownMenuItem != null) {
@@ -245,15 +323,21 @@ public class ChapterManager {
             private String oldTitle;
 
             {
-                addEventFilter(MouseEvent.MOUSE_CLICKED, e -> {
-                    Chapter it = getItem();
-                    if (e.getClickCount() == 1 && it != null && isPlaceholder(it) && !isEditing()) {
-                        startEdit();
-                        e.consume();
-                    } else if (e.getClickCount() == 2 && it != null && !isEditing()) {
-                        startEdit();
-                        e.consume();
+                addEventFilter(MouseEvent.MOUSE_PRESSED, e -> {
+                    if (chapterStructureLocked) return;
+                    if (isEmpty() || getItem() == null) return;
+
+                    // Always ensure selection on any click
+                    ListView<Chapter> list = getListView();
+                    if (list != null) {
+                        list.getSelectionModel().clearAndSelect(getIndex());
+                        list.getFocusModel().focus(getIndex());
                     }
+
+                    if (e.getClickCount() == 2 && !isEditing()) {
+                        startEdit();
+                    }
+                    e.consume();
                 });
             }
 
@@ -271,9 +355,7 @@ public class ChapterManager {
                 if (isEditing()) {
                     setText(null);
                     setGraphic(editor);
-                    return;
-                }
-                if (placeholder) {
+                } else if (placeholder) {
                     setText(null);
                     setGraphic(buildPlaceholderGraphic());
                 } else {
@@ -290,12 +372,13 @@ public class ChapterManager {
                 HBox box = new HBox(plus, hint);
                 box.setSpacing(2);
                 box.setPadding(new Insets(2, 4, 2, 4));
-                Tooltip.install(box, new Tooltip("Click to create a new chapter"));
+                Tooltip.install(box, new Tooltip("Double click to create a new chapter"));
                 return box;
             }
 
             @Override
             public void startEdit() {
+                if (chapterStructureLocked) return;
                 if (getItem() == null) return;
                 super.startEdit();
                 if (editor == null) createEditor();

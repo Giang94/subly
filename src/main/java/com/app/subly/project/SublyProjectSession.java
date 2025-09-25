@@ -152,7 +152,7 @@ public class SublyProjectSession {
     private Subtitle newEmptySubtitle() {
         Subtitle s = new Subtitle();
         s.setId(1);
-        s.setPrimaryText("");
+        s.setPrimaryText("This text will be displayed on the screen.");
         s.setSecondaryText("");
         return s;
     }

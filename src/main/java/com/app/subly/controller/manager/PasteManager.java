@@ -1,6 +1,7 @@
-// java
-package com.app.subly.component;
+package com.app.subly.controller.manager;
 
+import com.app.subly.component.EditHistory;
+import com.app.subly.component.RowIndexer;
 import com.app.subly.model.Subtitle;
 import javafx.collections.ObservableList;
 import javafx.scene.control.TableColumn;

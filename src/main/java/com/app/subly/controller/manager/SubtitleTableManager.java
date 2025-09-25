@@ -2,7 +2,6 @@ package com.app.subly.controller.manager;
 
 import com.app.subly.component.EditHistory;
 import com.app.subly.component.MultilineTableCell;
-import com.app.subly.component.PasteManager;
 import com.app.subly.component.RowIndexer;
 import com.app.subly.component.TrailingBlankRowPolicy;
 import com.app.subly.model.Chapter;
@@ -11,10 +10,17 @@ import com.app.subly.project.SublyProjectSession;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.scene.control.*;
-import javafx.scene.input.*;
+import javafx.scene.control.Button;
+import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableView;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
+import javafx.scene.input.MouseEvent;
+import javafx.scene.text.Text;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 
 public class SubtitleTableManager {
 
@@ -22,7 +28,7 @@ public class SubtitleTableManager {
     private final TableColumn<Subtitle, Integer> indexColumn;
     private final TableColumn<Subtitle, String> primaryColumn;
     private final TableColumn<Subtitle, String> secondaryColumn;
-    private final Label currentSubtitleLabel;
+    private final Text currentSubtitleText;
     private final Button prevButton;
     private final Button nextButton;
     private final Runnable markDirty;
@@ -34,20 +40,20 @@ public class SubtitleTableManager {
     private PasteManager pasteManager;
 
     public SubtitleTableManager(TableView<Subtitle> table,
-                         TableColumn<Subtitle, Integer> indexColumn,
-                         TableColumn<Subtitle, String> primaryColumn,
-                         TableColumn<Subtitle, String> secondaryColumn,
-                         Label currentSubtitleLabel,
-                         Button prevButton,
-                         Button nextButton,
-                         Runnable markDirty,
-                         java.util.function.Supplier<com.app.subly.component.Projector> projectorSupplier,
-                         java.util.function.Supplier<SublyProjectSession> sessionSupplier) {
+                                TableColumn<Subtitle, Integer> indexColumn,
+                                TableColumn<Subtitle, String> primaryColumn,
+                                TableColumn<Subtitle, String> secondaryColumn,
+                                Text currentSubtitleText,
+                                Button prevButton,
+                                Button nextButton,
+                                Runnable markDirty,
+                                java.util.function.Supplier<com.app.subly.component.Projector> projectorSupplier,
+                                java.util.function.Supplier<SublyProjectSession> sessionSupplier) {
         this.table = table;
         this.indexColumn = indexColumn;
         this.primaryColumn = primaryColumn;
         this.secondaryColumn = secondaryColumn;
-        this.currentSubtitleLabel = currentSubtitleLabel;
+        this.currentSubtitleText = currentSubtitleText;
         this.prevButton = prevButton;
         this.nextButton = nextButton;
         this.markDirty = markDirty;
@@ -71,7 +77,7 @@ public class SubtitleTableManager {
         trailingBlank.ensureTrailingBlankRow(table);
         if (!data.isEmpty()) {
             table.getSelectionModel().selectFirst();
-            currentSubtitleLabel.setText(data.getFirst().getPrimaryText());
+            currentSubtitleText.setText(data.getFirst().getPrimaryText());
         }
     }
 
@@ -144,7 +150,7 @@ public class SubtitleTableManager {
         table.getSelectionModel().selectedItemProperty().addListener((obs, o, n) -> {
             if (n == null) return;
             String text = n.getPrimaryText() == null ? "" : n.getPrimaryText().replace("\\n", "\n");
-            currentSubtitleLabel.setText(text);
+            currentSubtitleText.setText(text);
             var proj = projectorSupplier.get();
             if (proj != null) proj.setText(text);
         });
@@ -188,7 +194,7 @@ public class SubtitleTableManager {
             Subtitle sel = table.getSelectionModel().getSelectedItem();
             if (sel == row) {
                 String txt = newV == null ? "" : newV.replace("\\n", "\n");
-                currentSubtitleLabel.setText(txt);
+                currentSubtitleText.setText(txt);
                 var proj = projectorSupplier.get();
                 if (proj != null) proj.setText(txt);
             }
@@ -326,7 +332,7 @@ public class SubtitleTableManager {
         table.setItems(data);
         if (!data.isEmpty()) {
             table.getSelectionModel().selectFirst();
-            currentSubtitleLabel.setText(data.getFirst().getPrimaryText().replace("\\n", "\n"));
+            currentSubtitleText.setText(data.getFirst().getPrimaryText().replace("\\n", "\n"));
             var proj = projectorSupplier.get();
             if (proj != null) proj.setText(data.getFirst().getPrimaryText().replace("\\n", "\n"));
         }

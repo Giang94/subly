@@ -2,13 +2,24 @@ package com.app.subly.component;
 
 import com.app.subly.model.Subtitle;
 import javafx.application.Platform;
+import javafx.beans.value.ChangeListener;
+import javafx.collections.ListChangeListener;
 import javafx.scene.control.*;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.input.MouseEvent;
 
 public class MultilineTableCell extends TableCell<Subtitle, String> {
+
+    private static final String STYLE_COLUMN = "-fx-background-color: rgba(123,167,204,0.18);";
+    private static final String STYLE_CELL = "-fx-background-color: rgba(123,167,204,0.35);"
+            + "-fx-border-color: -fx-accent; -fx-border-width:1; -fx-border-radius:1; -fx-padding:1;";
+    private static final String TABLE_SELECTION_STYLE =
+            "-fx-selection-bar: #b4dcff; -fx-selection-bar-non-focused: #b4dcff;";
+
     private final TextArea textArea = new TextArea();
     private boolean committingViaTab = false;
+    private boolean focusListenerInstalled = false;
 
     public MultilineTableCell() {
         textArea.setWrapText(true);
@@ -43,7 +54,6 @@ public class MultilineTableCell extends TableCell<Subtitle, String> {
 
         textArea.focusedProperty().addListener((o, was, isNow) -> {
             if (!isNow && isEditing()) {
-                // Delay so focus model updates first
                 Platform.runLater(() -> {
                     if (isEditing()) doCommit(textArea.getText());
                 });
@@ -52,10 +62,22 @@ public class MultilineTableCell extends TableCell<Subtitle, String> {
 
         addEventFilter(KeyEvent.KEY_PRESSED, e -> {
             if (e.getCode() == KeyCode.ENTER && !isEditing()) {
-                // You decided ENTER no longer moves; just start edit
                 startEdit();
                 e.consume();
             }
+        });
+
+        addEventFilter(MouseEvent.MOUSE_PRESSED, e -> {
+            if (isEmpty()) return;
+            TableView<Subtitle> tv = getTableView();
+            if (tv != null) {
+                tv.getSelectionModel().clearAndSelect(getIndex(), getTableColumn());
+                tv.getFocusModel().focus(getIndex(), getTableColumn());
+            }
+            if (e.getClickCount() == 2 && !isEditing()) {
+                startEdit();
+            }
+            e.consume();
         });
     }
 
@@ -76,32 +98,38 @@ public class MultilineTableCell extends TableCell<Subtitle, String> {
         setGraphic(null);
         setText(getItem());
         refocusTable();
+        applySelectionStyling();
     }
 
     @Override
     public void commitEdit(String newValue) {
-        // Route through helper to ensure consistent cleanup
         doCommit(newValue);
     }
 
     private void doCommit(String raw) {
         String v = raw == null ? "" : raw;
-        // Preserve your literal \n storing rule
         super.commitEdit(v.replace("\n", "\\n"));
         setGraphic(null);
         setText(getItem());
-        // Restore focus to table unless we are moving via TAB
         if (!committingViaTab) {
             refocusTable();
         }
+        applySelectionStyling();
     }
 
     @Override
     protected void updateItem(String item, boolean empty) {
         super.updateItem(item, empty);
+        ensureTableSelectionColors();
+        if (!focusListenerInstalled) {
+            installFocusSync();
+            focusListenerInstalled = true;
+        }
+
         if (empty) {
             setText(null);
             setGraphic(null);
+            setStyle("");
         } else if (isEditing()) {
             textArea.setText(item == null ? "" : item);
             setGraphic(textArea);
@@ -109,6 +137,51 @@ public class MultilineTableCell extends TableCell<Subtitle, String> {
         } else {
             setText(item);
             setGraphic(null);
+        }
+
+        applySelectionStyling();
+    }
+
+    private void installFocusSync() {
+        TableView<Subtitle> tv = getTableView();
+        if (tv == null) return;
+        ChangeListener<TablePosition> focusListener = (obs, oldPos, newPos) -> applySelectionStyling();
+        tv.getFocusModel().focusedCellProperty().addListener(focusListener);
+        // Fixed listener (use raw TablePosition due to JavaFX API)
+        tv.getSelectionModel().getSelectedCells().addListener(
+                (ListChangeListener<TablePosition>) c -> applySelectionStyling()
+        );
+    }
+
+    private void ensureTableSelectionColors() {
+        TableView<Subtitle> tv = getTableView();
+        if (tv == null) return;
+        if (tv.getProperties().get("customSelectionColorsInstalled") == null) {
+            String existing = tv.getStyle();
+            tv.setStyle((existing == null ? "" : existing + ";") + TABLE_SELECTION_STYLE);
+            tv.getProperties().put("customSelectionColorsInstalled", Boolean.TRUE);
+        }
+    }
+
+    private void applySelectionStyling() {
+        TableView<Subtitle> tv = getTableView();
+        if (tv == null) {
+            setStyle("");
+            return;
+        }
+        TablePosition<Subtitle, ?> focusPos = tv.getFocusModel().getFocusedCell();
+        if (focusPos == null || focusPos.getTableColumn() == null) {
+            setStyle("");
+            return;
+        }
+
+        boolean sameColumn = getTableColumn() == focusPos.getTableColumn();
+        boolean sameCell = sameColumn && focusPos.getRow() == getIndex();
+
+        if (sameCell) {
+            setStyle(STYLE_CELL);
+        } else {
+            setStyle("");
         }
     }
 
@@ -129,7 +202,10 @@ public class MultilineTableCell extends TableCell<Subtitle, String> {
                 }
                 Subtitle s = new Subtitle(tv.getItems().size() + 1, "", "");
                 tv.getItems().add(s);
-                try { RowIndexer.renumber(tv.getItems()); } catch (Throwable ignored) {}
+                try {
+                    RowIndexer.renumber(tv.getItems());
+                } catch (Throwable ignored) {
+                }
             }
 
             if (tv.getVisibleLeafColumns().size() >= 2) {

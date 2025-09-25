@@ -1,6 +1,6 @@
 package com.app.subly.controller.manager;
 
-import com.app.subly.model.BackgroundType;
+import com.app.subly.model.enums.BackgroundType;
 import com.app.subly.model.SublySettings;
 import com.app.subly.project.SublyProjectSession;
 import com.app.subly.utils.ColorConvertUtils;
@@ -114,6 +114,7 @@ public class BackgroundSettingsManager {
     public void applyBackground() {
         SublyProjectSession session = sessionSupplier.get();
         if (session == null) return;
+
         session.update(s -> {
             if (bgTransparentRadio.isSelected()) {
                 s.setBackgroundType(BackgroundType.TRANSPARENT);
@@ -128,8 +129,21 @@ public class BackgroundSettingsManager {
                 s.setProjectorImageUri(imagePathField.getText());
             }
         });
+
         var proj = projectorSupplier.get();
-        if (proj != null) proj.applySettings(session.getSettings());
+        if (proj != null) {
+            if (bgImageRadio.isSelected()) {
+                String uri = imagePathField.getText();
+                boolean ok = proj.setBackgroundImage(uri);
+                if (!ok) {
+                    imagePathField.clear(); // empty string
+                    session.update(s -> s.setProjectorImageUri(null));
+                }
+            } else {
+                proj.applySettings(session.getSettings());
+            }
+        }
+
         markDirty.run();
         firePreviewUpdate();
     }

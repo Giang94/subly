@@ -1,4 +1,4 @@
-package com.app.subly.model;
+package com.app.subly.model.enums;
 
 public enum BackgroundType {
     TRANSPARENT,

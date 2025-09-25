@@ -18,6 +18,9 @@ import java.io.File;
 import java.io.IOException;
 import java.util.function.Supplier;
 
+/**
+ * Now .subly files are zipped archives handled transparently by SublyProjectIO.
+ */
 public class ProjectFileManager {
 
     private static final String PROJECT_EXT = ".subly";
@@ -138,23 +141,26 @@ public class ProjectFileManager {
         File selected = chooser.showOpenDialog(new Stage());
         if (selected == null) return;
         try {
-            var project = SublyProjectIO.load(selected.toPath());
+            Object project = SublyProjectIO.load(selected.toPath());
             SublyProjectSession session = sessionSupplier.get();
             if (session != null) {
                 session.setProjectFile(selected);
-                if (project.getSettings() != null) {
-                    appSupplier.get().updateSetting(project.getSettings());
-                    session.setSettings(project.getSettings());
+                // ProjectBuilders + session population stays as-is
+                if (project instanceof com.app.subly.model.SublyProjectFile p) {
+                    if (p.getSettings() != null) {
+                        appSupplier.get().updateSetting(p.getSettings());
+                        session.setSettings(p.getSettings());
+                    }
+                    session.replaceAllChapters(p.getChapters());
+                    if (!session.getChapters().isEmpty()) {
+                        session.ensureAllChapterIds();
+                        session.setSelectedChapterIndex(0);
+                        subtitleManager.reloadSubtitles(session.getChapters().get(0).getSubtitles());
+                    } else {
+                        subtitleManager.reloadSubtitles(java.util.List.of(new Subtitle(1, "", "")));
+                    }
+                    appSupplier.get().updateTitle(p.getFileName());
                 }
-                session.replaceAllChapters(project.getChapters());
-                if (!session.getChapters().isEmpty()) {
-                    session.ensureAllChapterIds();
-                    session.setSelectedChapterIndex(0);
-                    subtitleManager.reloadSubtitles(session.getChapters().get(0).getSubtitles());
-                } else {
-                    subtitleManager.reloadSubtitles(java.util.List.of(new Subtitle(1, "", "")));
-                }
-                appSupplier.get().updateTitle(project.getFileName());
                 session.clearDirty();
                 dirtySetter.accept(false);
                 refreshActions();

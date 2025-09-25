@@ -1,6 +1,6 @@
 package com.app.subly.component;
 
-import com.app.subly.model.BackgroundType;
+import com.app.subly.model.enums.BackgroundType;
 
 import java.util.Objects;
 

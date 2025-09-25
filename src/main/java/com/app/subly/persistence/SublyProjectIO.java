@@ -1,48 +1,100 @@
 package com.app.subly.persistence;
 
-import com.app.subly.model.SublyProjectFile;
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * Public static API preserved for existing callers (ProjectFileManager).
+ * Now treats *.subly as a zip archive (project.json + media/).
+ */
 public final class SublyProjectIO {
 
-    private static final ObjectMapper MAPPER = new ObjectMapper()
-            .registerModule(new JavaTimeModule())
-            .setSerializationInclusion(JsonInclude.Include.NON_NULL)
-            .enable(SerializationFeature.INDENT_OUTPUT)
-            .configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false)
-            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-            .configure(JsonParser.Feature.AUTO_CLOSE_SOURCE, true)
-            .configure(JsonGenerator.Feature.AUTO_CLOSE_TARGET, true);
+    private static final ObjectMapper MAPPER;
+    private static final ProjectArchiveIO ARCHIVER;
+    // Track extraction roots so caller can cleanup if desired
+    private static final Map<Path, Path> EXTRACTIONS = new ConcurrentHashMap<>();
+
+    static {
+        MAPPER = new ObjectMapper()
+                .disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
+        ARCHIVER = new ProjectArchiveIO(MAPPER);
+    }
 
     private SublyProjectIO() {
     }
 
-    public static void save(SublyProjectFile project, Path file) throws IOException {
-        if (project == null) throw new IllegalArgumentException("project is null");
-        if (file == null) throw new IllegalArgumentException("file is null");
-        project.setSchemaVersion(project.getSchemaVersion() == null ? 1 : project.getSchemaVersion());
-        project.normalize();
-        if (file.getParent() != null) Files.createDirectories(file.getParent());
-        MAPPER.writeValue(file.toFile(), project);
+    /**
+     * Saves project as archive (.subly).
+     */
+    public static void save(Object projectModel, Path targetFile) throws IOException {
+        Objects.requireNonNull(projectModel, "projectModel");
+        Objects.requireNonNull(targetFile, "targetFile");
+        ensureParent(targetFile);
+        ARCHIVER.save(projectModel, targetFile);
     }
 
-    public static SublyProjectFile load(Path file) throws IOException {
-        if (file == null || !Files.exists(file)) {
-            throw new IOException("Project file not found: " + file);
+    /**
+     * Loads project from archive (.subly). If a legacy plain JSON is detected
+     * (not a zip), it is read directly (backward compatibility).
+     */
+    public static <T> T load(Path file) throws IOException {
+        Objects.requireNonNull(file, "file");
+        if (!Files.isRegularFile(file)) {
+            throw new IOException("File not found: " + file);
         }
-        SublyProjectFile p = MAPPER.readValue(file.toFile(), SublyProjectFile.class);
-        if (p.getSchemaVersion() == null) p.setSchemaVersion(1);
-        p.normalize();
-        return p;
+        if (isZip(file)) {
+            var loaded = ARCHIVER.load(file);
+            EXTRACTIONS.put(file.toAbsolutePath(), loaded.extractionRoot());
+            @SuppressWarnings("unchecked")
+            T cast = (T) loaded.projectModel();
+            return cast;
+        } else {
+            // Legacy JSON fallback
+            return MAPPER.readValue(Files.readAllBytes(file), (Class<T>) Object.class);
+        }
+    }
+
+    /**
+     * Optional: remove extracted temp directory for a loaded archive.
+     */
+    public static void cleanupExtraction(Path archiveFile) throws IOException {
+        Path root = EXTRACTIONS.remove(archiveFile.toAbsolutePath());
+        if (root != null && Files.exists(root)) {
+            try (var walk = Files.walk(root)) {
+                walk.sorted(java.util.Comparator.reverseOrder())
+                        .forEach(p -> {
+                            try {
+                                Files.deleteIfExists(p);
+                            } catch (IOException ignored) {
+                            }
+                        });
+            }
+        }
+    }
+
+    private static void ensureParent(Path target) throws IOException {
+        Path parent = target.toAbsolutePath().getParent();
+        if (parent != null) Files.createDirectories(parent);
+    }
+
+    private static boolean isZip(Path file) {
+        try {
+            if (Files.size(file) < 4) return false;
+            byte[] sig = new byte[4];
+            try (var in = Files.newInputStream(file)) {
+                if (in.read(sig) != 4) return false;
+            }
+            // ZIP magic: PK\003\004
+            return sig[0] == 'P' && sig[1] == 'K';
+        } catch (IOException e) {
+            return false;
+        }
     }
 }

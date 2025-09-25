@@ -2,35 +2,35 @@ package com.app.subly.controller;
 
 import com.app.subly.SublyApplication;
 import com.app.subly.component.Projector;
+import com.app.subly.component.ProjectorRef;
 import com.app.subly.component.StyleToolbarBinder;
 import com.app.subly.controller.manager.*;
 import com.app.subly.model.Chapter;
 import com.app.subly.model.Subtitle;
 import com.app.subly.project.SublyProjectSession;
-import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.fxml.FXML;
-import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
-import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Text;
-import javafx.scene.text.TextAlignment;
+import javafx.scene.text.TextFlow;
+
+import static com.app.subly.persistence.AppSettingsIO.DEFAULT_SUBTITLE_COLOR;
 
 public class ControlPanelController {
 
     private static final int MIN_FONT_SIZE = 24;
     private static final int MAX_FONT_SIZE = 240;
-    private static final double ASPECT_W = 16.0;
-    private static final double ASPECT_H = 9.0;
 
     // App/session
     private SublyApplication app;
     private SublyProjectSession session;
-    private Projector projector;
+
+    // Keep a shared projector ref across parts
+    private final ProjectorRef projectorRef = new ProjectorRef();
 
     // Managers
     private SubtitleTableManager subtitleManager;
@@ -38,6 +38,9 @@ public class ControlPanelController {
     private BackgroundSettingsManager backgroundManager;
     private ProjectFileManager projectFileManager;
     private SubtitlePreviewManager previewManager;
+    private PresentingModeManager presentingModeManager;
+    private ShowScreenToggleManager showScreenToggleManager;
+    private EditingControlLockManager editingControlLockManager;
 
     // Style toolbar
     private StyleToolbarBinder styleBinder;
@@ -48,7 +51,9 @@ public class ControlPanelController {
     @FXML
     private StackPane currentSubtitlePane;
     @FXML
-    private Label currentSubtitleLabel;
+    private TextFlow currentSubtitleTextFlow;
+    @FXML
+    private Text currentSubtitleText;
     @FXML
     private ImageView currentSubtitleImage;
     @FXML
@@ -63,16 +68,22 @@ public class ControlPanelController {
     private Button prevButton;
     @FXML
     private Button nextButton;
+    @FXML
+    private ToggleButton presentingModeToggle;
 
     // Text settings
     @FXML
-    private TextField fontSizeField;
+    private ComboBox<String> fontFamilyCombo;
     @FXML
-    private Button fontSizeDownButton;
-    @FXML
-    private Button fontSizeUpButton;
+    private Spinner<Integer> fontSizeSpinner;
     @FXML
     private ColorPicker textColorPicker;
+    @FXML
+    private ComboBox<String> fontWeightCombo;
+    @FXML
+    private ComboBox<String> borderWeightCombo;
+    @FXML
+    private ColorPicker borderColorPicker;
 
     // Background controls
     @FXML
@@ -131,19 +142,26 @@ public class ControlPanelController {
 
     @FXML
     private void initialize() {
-        configureCurrentSubtitleLabel();
         styleBinder = new StyleToolbarBinder(
-                MIN_FONT_SIZE, MAX_FONT_SIZE,
-                fontSizeField, fontSizeDownButton, fontSizeUpButton,
-                textColorPicker, this::currentFontSize, this::applySettingsToProjector, this::markDirty
+                MIN_FONT_SIZE,
+                MAX_FONT_SIZE,
+                fontSizeSpinner,
+                textColorPicker,
+                fontFamilyCombo,
+                fontWeightCombo,
+                borderWeightCombo,
+                borderColorPicker,
+                this::currentFontSize,
+                this::applySettingsToProjector,
+                this::markDirty
         );
 
-        // Instantiate managers
+        // Core managers
         subtitleManager = new SubtitleTableManager(
                 subtitleTable, indexColumn, primaryTextColumn, secondaryTextColumn,
-                currentSubtitleLabel, prevButton, nextButton,
+                currentSubtitleText, prevButton, nextButton,
                 this::markDirty,
-                () -> projector,
+                projectorRef::get,
                 () -> session
         );
 
@@ -159,7 +177,7 @@ public class ControlPanelController {
         backgroundManager = new BackgroundSettingsManager(
                 bgTransparentRadio, bgColorRadio, bgImageRadio, bgToggleGroup,
                 bgColorPicker, chooseImageButton, imagePathField,
-                () -> session, () -> projector, this::markDirty,
+                () -> session, projectorRef::get, this::markDirty,
                 this::onBackgroundChanged
         );
 
@@ -174,118 +192,89 @@ public class ControlPanelController {
                 () -> dirty.get()
         );
 
-        previewManager = new SubtitlePreviewManager(currentSubtitlePane, currentSubtitleImage, currentSubtitleLabel);
+        previewManager = new SubtitlePreviewManager(
+                currentSubtitlePane,
+                currentSubtitleImage,
+                currentSubtitleTextFlow,
+                currentSubtitleText
+        );
 
+        // Extracted controllers
+        editingControlLockManager = new EditingControlLockManager(
+                fontSizeSpinner, textColorPicker,
+                bgTransparentRadio, bgColorRadio, bgColorPicker, bgImageRadio, imagePathField, chooseImageButton,
+                subtitleTable, chapterManager,
+                addChapterMenuItem, renameChapterMenuItem, deleteChapterMenuItem, moveUpMenuItem, moveDownMenuItem,
+                undoMenuItem, redoMenuItem
+        );
+
+        presentingModeManager = new PresentingModeManager(
+                presentingModeToggle, prevButton, nextButton,
+                subtitleTable,
+                () -> session,
+                enabled -> editingControlLockManager.setEditingEnabled(enabled)
+        );
+
+        showScreenToggleManager = new ShowScreenToggleManager(
+                toggleShowScreenButton,
+                subtitleTable,
+                projectorRef,
+                backgroundManager,
+                this::applyToggleText,
+                this::currentFontSize,
+                this::sessionTextColor,
+                (Integer size, Color color) -> applySettingsToProjector(size, color),
+                this::updatePreviewAppearance
+        );
+
+        // Initialize modules
         subtitleManager.initialize();
         chapterManager.initialize();
         backgroundManager.initialize();
         projectFileManager.initialize();
         previewManager.initialize();
+        presentingModeManager.initialize();
+        showScreenToggleManager.initialize();
 
         if (imagePathField != null) {
             imagePathField.setVisible(false);
             imagePathField.setManaged(false);
         }
 
-        setupShowScreenToggle();
+        if (textColorPicker != null) {
+            textColorPicker.setValue(sessionTextColor());
+        }
         updatePreviewAppearance();
-    }
-
-    private void setupShowScreenToggle() {
-        applyToggleText();
-        toggleShowScreenButton.setOnAction(e -> {
-            if (toggleShowScreenButton.isSelected()) {
-                if (projector == null) {
-                    projector = new Projector();
-                }
-                projector.show();
-                Subtitle sel = subtitleTable.getSelectionModel().getSelectedItem();
-                if (sel != null && sel.getPrimaryText() != null) {
-                    projector.setText(sel.getPrimaryText());
-                }
-                backgroundManager.applyBackground();
-                applySettingsToProjector(currentFontSize(), textColorPicker.getValue());
-                updatePreviewAppearance();
-                applyToggleText();
-            } else {
-                if (projector != null) projector.hide();
-                applyToggleText();
-            }
-        });
-    }
-
-    private void applyToggleText() {
-        toggleShowScreenButton.setText(toggleShowScreenButton.isSelected() ? "Close Show Screen" : "Open Show Screen");
     }
 
     public void setShowScreen(SublyApplication app, Projector projector) {
         this.app = app;
-        this.projector = projector;
-        styleBinder.rebind(session, projector);
+        this.projectorRef.set(projector);
+        styleBinder.rebind(session, projectorRef.get());
         backgroundManager.applyBackground();
+        presentingModeManager.updatePresentingToggleState();
     }
 
     public void setSession(SublyProjectSession session) {
         this.session = session;
         chapterManager.onSessionSet();
         subtitleManager.onSessionSet();
-        styleBinder.rebind(session, projector);
+        styleBinder.rebind(session, projectorRef.get());
         backgroundManager.onSessionSet();
         projectFileManager.refreshActions();
-    }
+        presentingModeManager.onSessionSet();
 
-    private void configureCurrentSubtitleLabel() {
-        if (currentSubtitleLabel == null) return;
-        currentSubtitleLabel.setWrapText(false);
-        currentSubtitleLabel.setTextAlignment(TextAlignment.CENTER);
-        currentSubtitleLabel.setAlignment(Pos.TOP_CENTER);
-        Rectangle clip = new Rectangle();
-        currentSubtitleLabel.setClip(clip);
-        final Text measurer = new Text("Wg\nWg\nWg\nWg");
-
-        Runnable applyHeights = () -> {
-            currentSubtitleLabel.applyCss();
-            currentSubtitleLabel.layout();
-
-            measurer.setFont(currentSubtitleLabel.getFont());
-            double left = currentSubtitleLabel.getPadding().getLeft();
-            double right = currentSubtitleLabel.getPadding().getRight();
-            double top = currentSubtitleLabel.getPadding().getTop();
-            double bottom = currentSubtitleLabel.getPadding().getBottom();
-
-            // Use a wide wrapping width to measure single-line height reliably
-            measurer.setWrappingWidth(10_000);
-            double lineHeight = Math.ceil(measurer.getLayoutBounds().getHeight() / 4.0); // 4 lines in template text
-            if (lineHeight <= 0) lineHeight = 20;
-
-            double threeLinesContent = lineHeight * 3;
-            double totalHeight = threeLinesContent + top + bottom + 1;
-
-            // Compute width from aspect ratio
-            double width = (totalHeight * ASPECT_W) / ASPECT_H;
-
-            currentSubtitleLabel.setMinHeight(totalHeight);
-            currentSubtitleLabel.setPrefHeight(totalHeight);
-            currentSubtitleLabel.setMaxHeight(totalHeight);
-
-            currentSubtitleLabel.setMinWidth(width);
-            currentSubtitleLabel.setPrefWidth(width);
-            currentSubtitleLabel.setMaxWidth(width);
-
-            clip.setWidth(width);
-            clip.setHeight(totalHeight);
-        };
-
-        // Recalculate when font or scene added
-        currentSubtitleLabel.fontProperty().addListener((o, ov, nv) -> applyHeights.run());
-        currentSubtitleLabel.sceneProperty().addListener((o, ov, nv) -> {
-            if (nv != null) Platform.runLater(applyHeights);
-        });
-        // Initial
-        Platform.runLater(applyHeights);
+        if (presentingModeToggle == null || !presentingModeToggle.isSelected()) {
+            editingControlLockManager.setEditingEnabled(true);
+        }
+        if (textColorPicker != null) {
+            textColorPicker.setValue(sessionTextColor());
+        }
+        updatePreviewAppearance();
     }
 
     private void applySettingsToProjector(int size, Color textColor) {
+        Projector projector = projectorRef.get();
         if (projector != null && session != null) {
             projector.applyLabelSettings(session.getSettings());
             if (textColor != null) {
@@ -300,7 +289,7 @@ public class ControlPanelController {
 
     private void updatePreviewAppearance() {
         if (previewManager == null) return;
-        Color txt = textColorPicker != null ? textColorPicker.getValue() : null;
+        Color txt = textColorPicker != null ? textColorPicker.getValue() : Color.web(DEFAULT_SUBTITLE_COLOR);
         previewManager.updateAppearance(
                 txt,
                 bgTransparentRadio,
@@ -309,6 +298,10 @@ public class ControlPanelController {
                 bgColorPicker,
                 imagePathField
         );
+    }
+
+    private void applyToggleText() {
+        toggleShowScreenButton.setText(toggleShowScreenButton.isSelected() ? "Close Show Screen" : "Open Show Screen");
     }
 
     private void setDirty(boolean v) {
@@ -321,13 +314,26 @@ public class ControlPanelController {
     }
 
     private int currentFontSize() {
-        if (fontSizeField == null) return MIN_FONT_SIZE;
+        if (fontSizeSpinner == null) return MIN_FONT_SIZE;
         try {
-            int v = Integer.parseInt(fontSizeField.getText() == null ? String.valueOf(MIN_FONT_SIZE) : fontSizeField.getText().trim());
+            int v = fontSizeSpinner.getValue() == null ? MIN_FONT_SIZE : fontSizeSpinner.getValue();
             return Math.max(MIN_FONT_SIZE, Math.min(MAX_FONT_SIZE, v));
         } catch (NumberFormatException ex) {
             return MIN_FONT_SIZE;
         }
+    }
+
+    private Color sessionTextColor() {
+        try {
+            if (session != null && session.getSettings() != null) {
+                String hex = session.getSettings().getSubtitleColor();
+                if (hex != null && !hex.isBlank()) {
+                    return Color.web(hex);
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return Color.web(DEFAULT_SUBTITLE_COLOR);
     }
 
     public void onBackgroundChanged() {

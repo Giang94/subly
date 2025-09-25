@@ -4,6 +4,10 @@
 <?import javafx.scene.layout.*?>
 
 <?import javafx.scene.image.ImageView?>
+<?import javafx.scene.text.TextFlow?>
+<?import javafx.scene.text.Text?>
+<?import javafx.collections.FXCollections?>
+<?import java.lang.String?>
 <BorderPane xmlns="http://javafx.com/javafx/21"
             xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="com.app.subly.controller.ControlPanelController">
@@ -29,11 +33,49 @@
                 </Menu>
             </menus>
         </MenuBar>
+
+        <BorderPane>
+            <center>
+                <StackPane fx:id="currentSubtitlePane"
+                           minHeight="60" prefHeight="60" maxHeight="60"
+                           maxWidth="Infinity"
+                           BorderPane.alignment="CENTER"
+                           style="-fx-border-color: -fx-box-border; -fx-padding: 8;">
+                    <children>
+                        <!-- Background image -->
+                        <ImageView fx:id="currentSubtitleImage"
+                                   preserveRatio="true"
+                                   fitHeight="60"
+                                   StackPane.alignment="CENTER"/>
+
+                        <!-- Text on top -->
+                        <TextFlow fx:id="currentSubtitleTextFlow" textAlignment="CENTER"
+                                  StackPane.alignment="CENTER" style="-fx-padding: 4;">
+                            <children>
+                                <Text fx:id="currentSubtitleText"/>
+                            </children>
+                        </TextFlow>
+                    </children>
+                </StackPane>
+            </center>
+            <right>
+                <HBox alignment="TOP_RIGHT" spacing="6"
+                      BorderPane.alignment="TOP_RIGHT"
+                      style="-fx-padding: 4;">
+                    <ToggleButton fx:id="presentingModeToggle"
+                                  text="Editing"/>
+                    <ToggleButton fx:id="toggleShowScreenButton"
+                                  text="Open Show Screen"/>
+                </HBox>
+            </right>
+        </BorderPane>
     </top>
 
     <left>
         <VBox fx:id="chaptersPanel"
-              spacing="8" prefWidth="260" minWidth="220" maxWidth="400">
+              spacing="14"
+              prefWidth="260" minWidth="220" maxWidth="400"
+              style="-fx-padding: 10;">
             <padding>
                 <Insets top="8" right="8" bottom="8" left="8"/>
             </padding>
@@ -72,78 +114,18 @@
     </left>
 
     <center>
-        <VBox spacing="10">
+        <VBox spacing="14"
+              style="-fx-padding: 10;">
             <padding>
-                <Insets top="10" right="10" bottom="10" left="10"/>
+                <Insets top="8" right="8" bottom="8" left="8"/>
             </padding>
 
-            <!-- Row 1: Subtitle preview centered, show screen toggle at right -->
-            <BorderPane>
-                <center>
-                    <StackPane fx:id="currentSubtitlePane"
-                               minHeight="60" prefHeight="60" maxHeight="60"
-                               maxWidth="Infinity"
-                               BorderPane.alignment="CENTER"
-                               style="-fx-border-color: -fx-box-border; -fx-padding: 8;">
-                        <children>
-                            <!-- Background image -->
-                            <ImageView fx:id="currentSubtitleImage"
-                                       preserveRatio="true"
-                                       smooth="true"
-                                       fitHeight="60"
-                                       StackPane.alignment="CENTER"/>
-
-                            <!-- Text on top -->
-                            <Label fx:id="currentSubtitleLabel"
-                                   text="Subtitle text"
-                                   style="-fx-text-fill: white; -fx-font-size: 12px;"
-                                   wrapText="true"
-                                   textAlignment="CENTER"
-                                   StackPane.alignment="CENTER"/>
-                        </children>
-                    </StackPane>
-                    <!--                    <Label fx:id="currentSubtitleLabel"-->
-                    <!--                           minHeight="60" prefHeight="60" maxHeight="60"-->
-                    <!--                           maxWidth="Infinity"-->
-                    <!--                           BorderPane.alignment="CENTER"-->
-                    <!--                           style="-fx-border-color: -fx-box-border; -fx-padding: 8; -fx-alignment: center;"/>-->
-                </center>
-                <right>
-                    <ToggleButton fx:id="toggleShowScreenButton"
-                                  text="Open Show Screen"
-                                  StackPane.alignment="TOP_RIGHT"
-                                  style="-fx-translate-x: 4; -fx-translate-y: 4;"/>
-
-                </right>
-            </BorderPane>
-
-            <!-- Row 2: Formatting / background toolbar -->
             <HBox spacing="8" alignment="CENTER_LEFT">
-                <Label text="Font size:"/>
-                <Button fx:id="fontSizeDownButton" text="-" minWidth="30"/>
-                <TextField fx:id="fontSizeField" promptText="Size" prefWidth="60"/>
-                <Button fx:id="fontSizeUpButton" text="+" minWidth="30"/>
-
-                <Separator orientation="VERTICAL"/>
-
-                <Label text="Text color:"/>
-                <ColorPicker fx:id="textColorPicker"/>
-
-                <Separator orientation="VERTICAL"/>
-
-                <Label text="Background:"/>
-                <RadioButton fx:id="bgTransparentRadio" text="Transparent" selected="true"/>
-                <RadioButton fx:id="bgColorRadio" text="Color"/>
-                <ColorPicker fx:id="bgColorPicker"/>
-                <RadioButton fx:id="bgImageRadio" text="Image"/>
-                <TextField fx:id="imagePathField" promptText="Image URI" prefWidth="180"/>
-                <Button fx:id="chooseImageButton" text="Browse..."/>
-
+                <Label text="Subtitles"/>
                 <Region HBox.hgrow="ALWAYS"/>
             </HBox>
-
             <!-- Subtitle table -->
-            <TableView fx:id="subtitleTable" VBox.vgrow="ALWAYS" editable="true">
+            <TableView fx:id="subtitleTable" VBox.vgrow="ALWAYS" editable="true" prefWidth="800">
                 <columns>
                     <TableColumn fx:id="indexColumn" text="#"/>
                     <TableColumn fx:id="primaryTextColumn" text="Primary Text"/>
@@ -152,13 +134,132 @@
             </TableView>
 
             <!-- Navigation -->
-            <HBox spacing="8" alignment="CENTER_LEFT">
+            <HBox spacing="8" alignment="CENTER">
                 <Button fx:id="prevButton" text="Previous"/>
                 <Button fx:id="nextButton" text="Next"/>
             </HBox>
         </VBox>
     </center>
 
+    <right>
+        <!-- Formatting / background toolbar -->
+        <VBox fx:id="formatingToolsPanel"
+              spacing="14"
+              prefWidth="260" minWidth="220" maxWidth="400"
+              style="-fx-padding: 10;">
+
+            <padding>
+                <Insets top="8" right="8" bottom="8" left="8"/>
+            </padding>
+
+            <HBox spacing="8" alignment="CENTER_LEFT">
+                <Label text="Format"/>
+                <Region HBox.hgrow="ALWAYS"/>
+            </HBox>
+            <!-- Typography Section -->
+            <TitledPane text="Typography" expanded="true">
+                <content>
+                    <GridPane hgap="8" vgap="6">
+                        <columnConstraints>
+                            <ColumnConstraints halignment="RIGHT" minWidth="80" prefWidth="80"/>
+                            <ColumnConstraints halignment="LEFT" hgrow="ALWAYS"/>
+                        </columnConstraints>
+
+                        <Label text="Font:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+                        <ComboBox fx:id="fontFamilyCombo" promptText="Font" prefWidth="160"
+                                  GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+
+                        <Label text="Size:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+                        <Spinner fx:id="fontSizeSpinner" editable="true" prefWidth="90"
+                                 GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+
+                        <Label text="Weight:" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+                        <ComboBox fx:id="fontWeightCombo" prefWidth="120"
+                                  GridPane.rowIndex="2" GridPane.columnIndex="1">
+                            <items>
+                                <FXCollections fx:factory="observableArrayList">
+                                    <String fx:value="LIGHT"/>
+                                    <String fx:value="NORMAL"/>
+                                    <String fx:value="BOLD"/>
+                                    <String fx:value="HEAVY"/>
+                                </FXCollections>
+                            </items>
+                        </ComboBox>
+
+                        <Label text="Color:" GridPane.rowIndex="3" GridPane.columnIndex="0"/>
+                        <ColorPicker fx:id="textColorPicker"
+                                     style="-fx-color-label-visible: false;"
+                                     GridPane.rowIndex="4" GridPane.columnIndex="1"/>
+
+                        <Label text="Border:" GridPane.rowIndex="4" GridPane.columnIndex="0"/>
+                        <ComboBox fx:id="borderWeightCombo" prefWidth="120"
+                                  GridPane.rowIndex="3" GridPane.columnIndex="1">
+                            <items>
+                                <FXCollections fx:factory="observableArrayList">
+                                    <String fx:value="NONE"/>
+                                    <String fx:value="NORMAL"/>
+                                    <String fx:value="BOLD"/>
+                                    <String fx:value="HEAVY"/>
+                                </FXCollections>
+                            </items>
+                        </ComboBox>
+
+                        <Label text="Border Color:" GridPane.rowIndex="5" GridPane.columnIndex="0"/>
+                        <ColorPicker fx:id="borderColorPicker"
+                                     style="-fx-color-label-visible: false;"
+                                     GridPane.rowIndex="5" GridPane.columnIndex="1"/>
+                    </GridPane>
+                </content>
+            </TitledPane>
+            <Separator/>
+
+            <!-- Background Section -->
+            <TitledPane text="Background" expanded="true">
+                <content>
+                    <VBox spacing="8">
+                        <HBox spacing="12">
+                            <fx:define>
+                                <ToggleGroup fx:id="bgToggleGroup"/>
+                            </fx:define>
+                            <RadioButton fx:id="bgTransparentRadio" text="Transparent" toggleGroup="$bgToggleGroup"
+                                         selected="true"/>
+                            <RadioButton fx:id="bgColorRadio" text="Color" toggleGroup="$bgToggleGroup"/>
+                            <RadioButton fx:id="bgImageRadio" text="Image" toggleGroup="$bgToggleGroup"/>
+                        </HBox>
+
+                        <HBox spacing="8" alignment="CENTER_LEFT">
+                            <Label text="Color:"/>
+                            <ColorPicker fx:id="bgColorPicker"
+                                         style="-fx-color-label-visible: false;"
+                                         disable="true"/>
+                        </HBox>
+
+                        <GridPane hgap="6" vgap="6">
+                            <columnConstraints>
+                                <ColumnConstraints minWidth="60" prefWidth="70" halignment="RIGHT"/>
+                                <ColumnConstraints hgrow="ALWAYS"/>
+                                <ColumnConstraints minWidth="70"/>
+                            </columnConstraints>
+
+                            <Label text="Image:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+                            <TextField fx:id="imagePathField"
+                                       promptText="Image URI"
+                                       prefWidth="140"
+                                       disable="true"
+                                       GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+                            <Button fx:id="chooseImageButton"
+                                    text="Browse..."
+                                    disable="true"
+                                    GridPane.rowIndex="0" GridPane.columnIndex="2"/>
+                        </GridPane>
+                    </VBox>
+                </content>
+            </TitledPane>
+
+            <Region VBox.vgrow="ALWAYS"/>
+
+        </VBox>
+    </right>
     <padding>
         <Insets top="8" right="8" bottom="8" left="8"/>
     </padding>

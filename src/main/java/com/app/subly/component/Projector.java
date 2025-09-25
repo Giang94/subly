@@ -1,6 +1,11 @@
 package com.app.subly.component;
 
+import com.app.subly.model.Chapter;
 import com.app.subly.model.SublySettings;
+import com.app.subly.model.Subtitle;
+import com.app.subly.model.enums.FontWeight;
+import com.app.subly.utils.DialogHelper;
+import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Parent;
@@ -10,14 +15,30 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
+import javafx.scene.text.Font;
+import javafx.scene.text.Text;
 import javafx.scene.text.TextAlignment;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
+import lombok.Getter;
+import lombok.Setter;
 
+import java.util.Collections;
+import java.util.List;
+
+import static com.app.subly.utils.Fonts.mapFxWeight;
+
+@Getter
+@Setter
 public class Projector {
+
     private Stage stage;
     private Label label;
     private StackPane layout;
+    private List<Chapter> chapters = Collections.emptyList();
+
+    private int currentChapterIndex = -1;
+    private int currentRowIndex = -1;
 
     public Projector() {
         stage = new SublyApplicationStage();
@@ -103,10 +124,10 @@ public class Projector {
         stage.getScene().setFill(Color.rgb(0, 0, 0, 1.0));
     }
 
-    public void setBackgroundImage(String uriOrPath) {
+    public boolean setBackgroundImage(String uriOrPath) {
         if (uriOrPath == null || uriOrPath.isBlank()) {
             layout.getChildren().removeIf(node -> node instanceof ImageView);
-            return;
+            return true; // treated as cleared
         }
 
         String uri = uriOrPath;
@@ -115,8 +136,18 @@ public class Projector {
             if (f.exists()) uri = f.toURI().toString();
         }
 
-        Image image = new Image(uri, false);
-        if (image.isError()) return;
+        Image image;
+        try {
+            image = new Image(uri, false);
+        } catch (Exception ex) {
+            DialogHelper.showImageLoadFailure(stage, uri);
+            return false;
+        }
+
+        if (image.isError() || image.getWidth() <= 0 || image.getHeight() <= 0) {
+            DialogHelper.showImageLoadFailure(stage, uri);
+            return false;
+        }
 
         layout.getChildren().removeIf(ImageView.class::isInstance);
 
@@ -125,16 +156,14 @@ public class Projector {
         bgView.setSmooth(true);
         bgView.setCache(true);
 
-        // auto cover behavior
-        stage.getScene().widthProperty().addListener((obs, oldV, newV) -> resizeCover(bgView, image));
-        stage.getScene().heightProperty().addListener((obs, oldV, newV) -> resizeCover(bgView, image));
-
-        // init resize
+        stage.getScene().widthProperty().addListener((obs, o, n) -> resizeCover(bgView, image));
+        stage.getScene().heightProperty().addListener((obs, o, n) -> resizeCover(bgView, image));
         resizeCover(bgView, image);
 
         layout.getChildren().addFirst(bgView);
         layout.setBackground(null);
         layout.setStyle("-fx-background-color: transparent;");
+        return true;
     }
 
     private void resizeCover(ImageView bgView, Image image) {
@@ -164,32 +193,60 @@ public class Projector {
     }
 
     public void applyLabelSettings(SublySettings settings) {
-        label.setStyle(String.format("-fx-font-size: %spx; -fx-text-fill: %s;",
-                settings.getSubtitleFontSize(),
-                settings.getSubtitleColor()));
+        if (settings == null) return;
+
+        // Force the exact font family + weight + size
+        Font fxFont = Font.font(
+                settings.getSubtitleFontFamily(),
+                mapFxWeight(settings.getFontWeight()),
+                settings.getSubtitleFontSize()
+        );
+        System.out.println("Projector font: " + fxFont.getName() + ", size=" + fxFont.getSize());
+        label.setFont(fxFont);
+
+        StringBuilder style = new StringBuilder()
+                .append("-fx-text-fill: ").append(settings.getSubtitleColor()).append(";");
+
+        var border = settings.getSubtitleBorderWeight();
+        boolean borderOn = border != null && !border.isNone();
+        if (borderOn) {
+            double radius = border.getRadius();
+            double spread = border.getSpread();
+
+            String outlineHex = settings.getSubtitleBorderColor();
+            if (outlineHex == null || outlineHex.isBlank()) outlineHex = "#000000";
+            style.append("-fx-effect: dropshadow(gaussian, ")
+                    .append(outlineHex).append(", ")
+                    .append(radius).append(", ")
+                    .append(spread).append(", 0, 0);");
+        } else {
+            style.append("-fx-effect: none;");
+        }
+
+        label.setStyle(style.toString());
     }
 
-    public Label getLabel() {
-        return label;
-    }
+    public void show(SublySettings settings, int chapterIndex, int rowIndex) {
+        if (settings == null) return;
+        if (!stage.isShowing()) stage.show();
 
-    public void setLabel(Label label) {
-        this.label = label;
-    }
+        // Apply global (only) settings
+        applySettings(settings);
 
-    public Stage getStage() {
-        return stage;
-    }
+        String text = "";
+        if (chapters != null &&
+                chapterIndex >= 0 && chapterIndex < chapters.size()) {
 
-    public void setStage(Stage stage) {
-        this.stage = stage;
-    }
+            Chapter ch = chapters.get(chapterIndex);
+            List<Subtitle> rows = ch.getSubtitles();
+            if (rowIndex >= 0 && rowIndex < rows.size()) {
+                Subtitle row = rows.get(rowIndex);
+                text = (row.getPrimaryText() == null) ? "" : row.getPrimaryText();
+            }
+        }
 
-    public StackPane getLayout() {
-        return layout;
-    }
-
-    public void setLayout(StackPane layout) {
-        this.layout = layout;
+        currentChapterIndex = chapterIndex;
+        currentRowIndex = rowIndex;
+        setText(text);
     }
 }

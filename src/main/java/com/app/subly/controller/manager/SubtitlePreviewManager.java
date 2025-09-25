@@ -1,11 +1,9 @@
 package com.app.subly.controller.manager;
 
 import javafx.application.Platform;
-import javafx.beans.value.ChangeListener;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.ColorPicker;
-import javafx.scene.control.Label;
 import javafx.scene.control.RadioButton;
 import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
@@ -14,6 +12,8 @@ import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextAlignment;
+import javafx.scene.text.TextFlow;
+import javafx.scene.shape.Rectangle;
 
 public class SubtitlePreviewManager {
 
@@ -22,59 +22,99 @@ public class SubtitlePreviewManager {
 
     private final StackPane container;
     private final ImageView bgImageView;
-    private final Label textLabel;
+
+    private final TextFlow textFlow;
+    private final Text textNode;
+
+    // Clip the container to enforce the visible bounds
+    private final Rectangle textClip = new Rectangle();
 
     private boolean sizingConfigured = false;
 
-    public SubtitlePreviewManager(StackPane container, ImageView bgImageView, Label textLabel) {
+    public SubtitlePreviewManager(StackPane container, ImageView bgImageView, TextFlow textFlow, Text textNode) {
         this.container = container;
         this.bgImageView = bgImageView;
-        this.textLabel = textLabel;
+        this.textFlow = textFlow;
+        this.textNode = textNode;
     }
 
     public void initialize() {
         if (sizingConfigured) return;
         sizingConfigured = true;
 
-        textLabel.setWrapText(false);
-        textLabel.setTextAlignment(TextAlignment.CENTER);
-        textLabel.setAlignment(Pos.CENTER);
+        // Center the TextFlow node inside the container
+        StackPane.setAlignment(textFlow, Pos.CENTER);
+        textFlow.setTextAlignment(TextAlignment.CENTER);
 
-        Text measurer = new Text("Wg\nWg\nWg\nWg");
+        // Ensure the Text is attached
+        if (!textFlow.getChildren().contains(textNode)) {
+            textFlow.getChildren().setAll(textNode);
+        }
+
+        // Clip the container to the fixed preview area
+        container.setClip(textClip);
+
+        // Measure a single line accurately and build a safe 3-line height
+        Text oneLine = new Text("Wg");
 
         Runnable applyHeights = () -> {
             if (container.getScene() == null) return;
-            textLabel.applyCss();
-            textLabel.layout();
 
-            measurer.setFont(textLabel.getFont());
-            measurer.setWrappingWidth(10_000);
-            double lineHeight = Math.ceil(measurer.getLayoutBounds().getHeight() / 3.0);
-            if (lineHeight <= 0) lineHeight = 20;
+            textFlow.applyCss();
+            textFlow.layout();
 
-            double padT = safe(textLabel.getPadding().getTop());
-            double padB = safe(textLabel.getPadding().getBottom());
+            oneLine.setFont(textNode.getFont());
+            double lineHeight = Math.ceil(oneLine.getLayoutBounds().getHeight());
+            double lineSpacing = safe(textFlow.getLineSpacing());
 
-            double totalHeight = lineHeight * 3 + padT + padB + 1;
-            double width = (totalHeight * ASPECT_W) / ASPECT_H;
+            Insets pad = safeInsets(textFlow.getPadding());
+            double padT = pad.getTop();
+            double padB = pad.getBottom();
+            double padL = pad.getLeft();
+            double padR = pad.getRight();
 
+            // Exactly 3 lines (no extra multiplier)
+            double totalHeight = Math.ceil(lineHeight * 3 + lineSpacing * 2 + padT + padB + 2) * 1.5;
+            double width = Math.ceil((totalHeight * ASPECT_W) / ASPECT_H);
+
+            // Fix preview container size (the visible bounds)
             fixSize(container, width, totalHeight);
+
+            // TextFlow width is fixed for wrapping; height should be computed from content
+            textFlow.setPrefWidth(width);
+            textFlow.setMinWidth(width);
+            textFlow.setMaxWidth(width);
+
+            // Do NOT force height; let it compute by content so StackPane can center it vertically
+            textFlow.setMinHeight(Region.USE_PREF_SIZE);
+            textFlow.setPrefHeight(Region.USE_COMPUTED_SIZE);
+            textFlow.setMaxHeight(Region.USE_PREF_SIZE);
+
+            // Wrapping width excludes padding
+            double wrap = Math.max(0, width - (padL + padR));
+            textNode.setWrappingWidth(wrap);
+
+            // Update clip to the container bounds
+            textClip.setX(0);
+            textClip.setY(0);
+            textClip.setWidth(width);
+            textClip.setHeight(totalHeight);
+
+            // Refit background to container
             refitImage();
         };
 
-        textLabel.fontProperty().addListener((o, ov, nv) -> applyHeights.run());
+        textNode.fontProperty().addListener((o, ov, nv) -> applyHeights.run());
         container.sceneProperty().addListener((o, ov, nv) -> {
             if (nv != null) Platform.runLater(applyHeights);
         });
 
-        ChangeListener<Number> sizeWatcher = (o, ov, nv) -> refitImage();
+        javafx.beans.value.ChangeListener<Number> sizeWatcher = (o, ov, nv) -> refitImage();
         container.widthProperty().addListener(sizeWatcher);
         container.heightProperty().addListener(sizeWatcher);
 
-        container.setBorder(
-                new Border(new BorderStroke(
-                        Color.BLACK, BorderStrokeStyle.SOLID, CornerRadii.EMPTY, new BorderWidths(1)
-                ))
+        container.setBorder(new Border(new BorderStroke(
+                Color.BLACK, BorderStrokeStyle.SOLID, CornerRadii.EMPTY, new BorderWidths(1)))
         );
 
         Platform.runLater(applyHeights);
@@ -89,7 +129,7 @@ public class SubtitlePreviewManager {
             TextField imagePathField
     ) {
         if (textColor != null) {
-            textLabel.setTextFill(textColor);
+            textNode.setFill(textColor);
         }
 
         boolean imageMode = imageRadio != null && imageRadio.isSelected();
@@ -109,6 +149,10 @@ public class SubtitlePreviewManager {
             }
         }
         container.setBackground(bg);
+    }
+
+    public void setText(String text) {
+        textNode.setText(text == null ? "" : text);
     }
 
     private void setBackgroundImage(String uriOrPath) {
@@ -135,12 +179,10 @@ public class SubtitlePreviewManager {
         double ih = img.getHeight();
         if (iw <= 0 || ih <= 0) return;
 
-        // Scale to cover
         double scale = Math.max(w / iw, h / ih);
         double sw = iw * scale;
         double sh = ih * scale;
 
-        // Compute centered viewport
         double vx = (sw - w) / (2 * scale);
         double vy = (sh - h) / (2 * scale);
         double vw = w / scale;
@@ -150,7 +192,6 @@ public class SubtitlePreviewManager {
         bgImageView.setFitWidth(w);
         bgImageView.setFitHeight(h);
     }
-
 
     private void fixSize(Region r, double w, double h) {
         if (w <= 0 || h <= 0) return;
@@ -178,5 +219,9 @@ public class SubtitlePreviewManager {
 
     private double safe(double v) {
         return (Double.isNaN(v) || Double.isInfinite(v)) ? 0 : v;
+    }
+
+    private Insets safeInsets(Insets in) {
+        return in == null ? Insets.EMPTY : in;
     }
 }

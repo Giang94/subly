@@ -18,4 +18,6 @@ module com.app.subly {
     exports com.app.subly.utils;
     exports com.app.subly.component;
     exports com.app.subly.controller.manager;
+    exports com.app.subly.model.enums;
+    opens com.app.subly.model.enums to com.fasterxml.jackson.databind;
 }

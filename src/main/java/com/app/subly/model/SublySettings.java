@@ -1,29 +1,37 @@
 package com.app.subly.model;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import com.app.subly.model.enums.BackgroundType;
+import com.app.subly.model.enums.BorderWeight;
+import com.app.subly.model.enums.FontWeight;
+import lombok.*;
 
 import java.io.Serializable;
 
+@Getter
+@Setter
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 public class SublySettings implements Serializable {
 
-    private BackgroundType backgroundType = BackgroundType.TRANSPARENT; // default
-    private boolean projectorTransparent = true; // default
-    private String projectorColor = "ffffff";   // default black
-    private String subtitleColor = "000000";    // default yellow
-    private Integer subtitleFontSize = 48;        // default size
+    private BackgroundType backgroundType = BackgroundType.TRANSPARENT;
+    private boolean projectorTransparent = true;
+    private String projectorColor = "ffffff";
     private String projectorImageUri;
 
-    public String getProjectorImageUri() {
-        return projectorImageUri;
+    private String subtitleFontFamily = "Arial";
+    private String subtitleColor = "000000";
+    private Integer subtitleFontSize = 48;
+    private FontWeight fontWeight = FontWeight.NORMAL;
+    private BorderWeight subtitleBorderWeight = BorderWeight.NORMAL;
+    private String subtitleBorderColor = "000000";
+
+    public String getSubtitleBorderColor() {
+        return tidyUpColorCode(subtitleBorderColor);
     }
 
-    public void setProjectorImageUri(String projectorImageUri) {
-        this.projectorImageUri = projectorImageUri;
+    public void setSubtitleBorderColor(String subtitleBorderColor) {
+        this.subtitleBorderColor = tidyUpColorCode(subtitleBorderColor);
     }
 
     public String getProjectorColor() {
@@ -47,29 +55,5 @@ public class SublySettings implements Serializable {
             return "#" + colorCode;
         }
         return colorCode;
-    }
-
-    public BackgroundType getBackgroundType() {
-        return backgroundType;
-    }
-
-    public void setBackgroundType(BackgroundType backgroundType) {
-        this.backgroundType = backgroundType;
-    }
-
-    public boolean isProjectorTransparent() {
-        return projectorTransparent;
-    }
-
-    public void setProjectorTransparent(boolean projectorTransparent) {
-        this.projectorTransparent = projectorTransparent;
-    }
-
-    public Integer getSubtitleFontSize() {
-        return subtitleFontSize;
-    }
-
-    public void setSubtitleFontSize(Integer subtitleFontSize) {
-        this.subtitleFontSize = subtitleFontSize;
     }
 }
