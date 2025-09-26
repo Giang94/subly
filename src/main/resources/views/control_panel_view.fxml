@@ -2,12 +2,12 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
-
 <?import javafx.scene.image.ImageView?>
 <?import javafx.scene.text.TextFlow?>
 <?import javafx.scene.text.Text?>
 <?import javafx.collections.FXCollections?>
 <?import java.lang.String?>
+
 <BorderPane xmlns="http://javafx.com/javafx/21"
             xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="com.app.subly.controller.ControlPanelController">
@@ -33,233 +33,266 @@
                 </Menu>
             </menus>
         </MenuBar>
-
-        <BorderPane>
-            <center>
-                <StackPane fx:id="currentSubtitlePane"
-                           minHeight="60" prefHeight="60" maxHeight="60"
-                           maxWidth="Infinity"
-                           BorderPane.alignment="CENTER"
-                           style="-fx-border-color: -fx-box-border; -fx-padding: 8;">
-                    <children>
-                        <!-- Background image -->
-                        <ImageView fx:id="currentSubtitleImage"
-                                   preserveRatio="true"
-                                   fitHeight="60"
-                                   StackPane.alignment="CENTER"/>
-
-                        <!-- Text on top -->
-                        <TextFlow fx:id="currentSubtitleTextFlow" textAlignment="CENTER"
-                                  StackPane.alignment="CENTER" style="-fx-padding: 4;">
-                            <children>
-                                <Text fx:id="currentSubtitleText"/>
-                            </children>
-                        </TextFlow>
-                    </children>
-                </StackPane>
-            </center>
-            <right>
-                <HBox alignment="TOP_RIGHT" spacing="6"
-                      BorderPane.alignment="TOP_RIGHT"
-                      style="-fx-padding: 4;">
-                    <ToggleButton fx:id="presentingModeToggle"
-                                  text="Editing"/>
-                    <ToggleButton fx:id="toggleShowScreenButton"
-                                  text="Open Show Screen"/>
-                </HBox>
-            </right>
-        </BorderPane>
     </top>
 
-    <left>
-        <VBox fx:id="chaptersPanel"
-              spacing="14"
-              prefWidth="260" minWidth="220" maxWidth="400"
-              style="-fx-padding: 10;">
-            <padding>
-                <Insets top="8" right="8" bottom="8" left="8"/>
-            </padding>
-
-            <HBox spacing="8" alignment="CENTER_LEFT">
-                <Label text="Chapters"/>
-                <Region HBox.hgrow="ALWAYS"/>
-            </HBox>
-
-            <ListView fx:id="chapterListView" VBox.vgrow="ALWAYS">
-                <placeholder>
-                    <Label text="No chapters yet"/>
-                </placeholder>
-                <contextMenu>
-                    <ContextMenu>
-                        <items>
-                            <MenuItem fx:id="addChapterMenuItem" text="Add Chapter"/>
-                            <SeparatorMenuItem/>
-                            <MenuItem fx:id="renameChapterMenuItem" text="Rename"/>
-                            <MenuItem fx:id="deleteChapterMenuItem" text="Delete"/>
-                            <SeparatorMenuItem/>
-                            <MenuItem fx:id="moveUpMenuItem" text="Move Up"/>
-                            <MenuItem fx:id="moveDownMenuItem" text="Move Down"/>
-                        </items>
-                    </ContextMenu>
-                </contextMenu>
-            </ListView>
-
-            <HBox spacing="6" alignment="CENTER_LEFT">
-                <Label text="Total:"/>
-                <Label fx:id="chapterCountLabel" text="0"/>
-                <Region HBox.hgrow="ALWAYS"/>
-                <Label fx:id="selectionInfoLabel" text="" opacity="0.7"/>
-            </HBox>
-        </VBox>
-    </left>
-
     <center>
-        <VBox spacing="14"
-              style="-fx-padding: 10;">
-            <padding>
-                <Insets top="8" right="8" bottom="8" left="8"/>
-            </padding>
+        <GridPane fx:id="mainGrid" hgap="12" vgap="14" style="-fx-padding: 8;">
+            <columnConstraints>
+                <ColumnConstraints minWidth="220" prefWidth="260" maxWidth="400"/>
+                <ColumnConstraints hgrow="ALWAYS" minWidth="400" prefWidth="600"/>
+                <ColumnConstraints minWidth="220" prefWidth="260" maxWidth="400"/>
+            </columnConstraints>
+            <rowConstraints>
+                <RowConstraints vgrow="NEVER"/>
+                <RowConstraints vgrow="ALWAYS"/>
+            </rowConstraints>
 
-            <HBox spacing="8" alignment="CENTER_LEFT">
-                <Label text="Subtitles"/>
-                <Region HBox.hgrow="ALWAYS"/>
+            <!-- Row 0: Preview spanning columns 0 & 1 -->
+            <StackPane fx:id="currentSubtitlePane"
+                       GridPane.rowIndex="0"
+                       GridPane.columnIndex="0"
+                       GridPane.columnSpan="2"
+                       alignment="CENTER"
+                       prefHeight="140"
+                       minHeight="120"
+                       style="-fx-padding:10; -fx-border-color:-fx-box-border; -fx-border-width:1; -fx-background-color:transparent; -fx-border-radius:3; -fx-background-radius:3;">
+                <children>
+                    <ImageView fx:id="currentSubtitleImage"
+                               preserveRatio="true"
+                               fitHeight="60"
+                               StackPane.alignment="CENTER"/>
+                    <TextFlow fx:id="currentSubtitleTextFlow"
+                              textAlignment="CENTER"
+                              maxWidth="Infinity"
+                              StackPane.alignment="CENTER"
+                              style="-fx-padding:0;">
+                        <children>
+                            <Text fx:id="currentSubtitleText"/>
+                        </children>
+                    </TextFlow>
+                </children>
+            </StackPane>
+
+            <!-- Row 0: Toggle buttons in tools column -->
+            <HBox GridPane.rowIndex="0"
+                  GridPane.columnIndex="2"
+                  alignment="TOP_RIGHT"
+                  spacing="6"
+                  style="-fx-padding:10 0 0 0;">
+                <ToggleButton fx:id="presentingModeToggle" text="Editing"/>
+                <ToggleButton fx:id="toggleShowScreenButton" text="Open Show Screen"/>
             </HBox>
-            <!-- Subtitle table -->
-            <TableView fx:id="subtitleTable" VBox.vgrow="ALWAYS" editable="true" prefWidth="800">
-                <columns>
-                    <TableColumn fx:id="indexColumn" text="#"/>
-                    <TableColumn fx:id="primaryTextColumn" text="Primary Text"/>
-                    <TableColumn fx:id="secondaryTextColumn" text="Secondary Text"/>
-                </columns>
-            </TableView>
 
-            <!-- Navigation -->
-            <HBox spacing="8" alignment="CENTER">
-                <Button fx:id="prevButton" text="Previous"/>
-                <Button fx:id="nextButton" text="Next"/>
-            </HBox>
-        </VBox>
-    </center>
-
-    <right>
-        <!-- Formatting / background toolbar -->
-        <VBox fx:id="formatingToolsPanel"
-              spacing="14"
-              prefWidth="260" minWidth="220" maxWidth="400"
-              style="-fx-padding: 10;">
-
-            <padding>
-                <Insets top="8" right="8" bottom="8" left="8"/>
-            </padding>
-
-            <HBox spacing="8" alignment="CENTER_LEFT">
-                <Label text="Format"/>
-                <Region HBox.hgrow="ALWAYS"/>
-            </HBox>
-            <!-- Typography Section -->
-            <TitledPane text="Typography" expanded="true">
-                <content>
-                    <GridPane hgap="8" vgap="6">
-                        <columnConstraints>
-                            <ColumnConstraints halignment="RIGHT" minWidth="80" prefWidth="80"/>
-                            <ColumnConstraints halignment="LEFT" hgrow="ALWAYS"/>
-                        </columnConstraints>
-
-                        <Label text="Font:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
-                        <ComboBox fx:id="fontFamilyCombo" promptText="Font" prefWidth="160"
-                                  GridPane.rowIndex="0" GridPane.columnIndex="1"/>
-
-                        <Label text="Size:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
-                        <Spinner fx:id="fontSizeSpinner" editable="true" prefWidth="90"
-                                 GridPane.rowIndex="1" GridPane.columnIndex="1"/>
-
-                        <Label text="Weight:" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
-                        <ComboBox fx:id="fontWeightCombo" prefWidth="120"
-                                  GridPane.rowIndex="2" GridPane.columnIndex="1">
+            <!-- Row 1: Chapters panel -->
+            <VBox fx:id="chaptersPanel"
+                  GridPane.rowIndex="1"
+                  GridPane.columnIndex="0"
+                  spacing="14"
+                  style="-fx-padding:10; -fx-border-color:-fx-box-border; -fx-border-width:1; -fx-border-radius:3; -fx-background-radius:3;">
+                <padding>
+                    <Insets top="8" right="8" bottom="8" left="8"/>
+                </padding>
+                <HBox spacing="8" alignment="CENTER_LEFT">
+                    <Label text="Chapters"/>
+                    <Region HBox.hgrow="ALWAYS"/>
+                </HBox>
+                <ListView fx:id="chapterListView" VBox.vgrow="ALWAYS">
+                    <placeholder>
+                        <Label text="No chapters yet"/>
+                    </placeholder>
+                    <contextMenu>
+                        <ContextMenu>
                             <items>
-                                <FXCollections fx:factory="observableArrayList">
-                                    <String fx:value="LIGHT"/>
-                                    <String fx:value="NORMAL"/>
-                                    <String fx:value="BOLD"/>
-                                    <String fx:value="HEAVY"/>
-                                </FXCollections>
+                                <MenuItem fx:id="addChapterMenuItem" text="Add Chapter"/>
+                                <SeparatorMenuItem/>
+                                <MenuItem fx:id="renameChapterMenuItem" text="Rename"/>
+                                <MenuItem fx:id="deleteChapterMenuItem" text="Delete"/>
+                                <SeparatorMenuItem/>
+                                <MenuItem fx:id="moveUpMenuItem" text="Move Up"/>
+                                <MenuItem fx:id="moveDownMenuItem" text="Move Down"/>
                             </items>
-                        </ComboBox>
+                        </ContextMenu>
+                    </contextMenu>
+                </ListView>
+                <HBox spacing="6" alignment="CENTER_LEFT">
+                    <Label text="Total:"/>
+                    <Label fx:id="chapterCountLabel" text="0"/>
+                    <Region HBox.hgrow="ALWAYS"/>
+                    <Label fx:id="selectionInfoLabel" text="" opacity="0.7"/>
+                </HBox>
+            </VBox>
 
-                        <Label text="Color:" GridPane.rowIndex="3" GridPane.columnIndex="0"/>
-                        <ColorPicker fx:id="textColorPicker"
-                                     style="-fx-color-label-visible: false;"
-                                     GridPane.rowIndex="4" GridPane.columnIndex="1"/>
+            <!-- Row 1: Subtitles center -->
+            <VBox GridPane.rowIndex="1"
+                  GridPane.columnIndex="1"
+                  spacing="14"
+                  style="-fx-padding:10; -fx-border-color:-fx-box-border; -fx-border-width:1; -fx-border-radius:3; -fx-background-radius:3;">
+                <padding>
+                    <Insets top="8" right="8" bottom="8" left="8"/>
+                </padding>
+                <HBox spacing="8" alignment="CENTER_LEFT">
+                    <Label text="Subtitles"/>
+                    <Region HBox.hgrow="ALWAYS"/>
+                </HBox>
+                <TableView fx:id="subtitleTable" VBox.vgrow="ALWAYS" editable="true" prefWidth="800">
+                    <columns>
+                        <TableColumn fx:id="indexColumn" text="#"/>
+                        <TableColumn fx:id="primaryTextColumn" text="Primary Text"/>
+                        <TableColumn fx:id="secondaryTextColumn" text="Secondary Text"/>
+                    </columns>
+                </TableView>
+                <HBox spacing="8" alignment="CENTER">
+                    <Button fx:id="prevButton" text="Previous"/>
+                    <Button fx:id="nextButton" text="Next"/>
+                </HBox>
+            </VBox>
 
-                        <Label text="Border:" GridPane.rowIndex="4" GridPane.columnIndex="0"/>
-                        <ComboBox fx:id="borderWeightCombo" prefWidth="120"
-                                  GridPane.rowIndex="3" GridPane.columnIndex="1">
-                            <items>
-                                <FXCollections fx:factory="observableArrayList">
-                                    <String fx:value="NONE"/>
-                                    <String fx:value="NORMAL"/>
-                                    <String fx:value="BOLD"/>
-                                    <String fx:value="HEAVY"/>
-                                </FXCollections>
-                            </items>
-                        </ComboBox>
+            <!-- Row 1: Formatting tools -->
+            <!-- File: `resources/views/control_panel_view.fxml` (modified Formatting tools panel snippet) -->
+            <VBox fx:id="formatingToolsPanel"
+                  GridPane.rowIndex="1"
+                  GridPane.columnIndex="2"
+                  spacing="14"
+                  style="-fx-padding:10; -fx-border-color:-fx-box-border; -fx-border-width:1; -fx-border-radius:3; -fx-background-radius:3;">
+                <padding>
+                    <Insets top="8" right="8" bottom="8" left="8"/>
+                </padding>
+                <HBox spacing="8" alignment="CENTER_LEFT">
+                    <Label text="Format"/>
+                    <Region HBox.hgrow="ALWAYS"/>
+                </HBox>
 
-                        <Label text="Border Color:" GridPane.rowIndex="5" GridPane.columnIndex="0"/>
-                        <ColorPicker fx:id="borderColorPicker"
-                                     style="-fx-color-label-visible: false;"
-                                     GridPane.rowIndex="5" GridPane.columnIndex="1"/>
-                    </GridPane>
-                </content>
-            </TitledPane>
-            <Separator/>
+                <TitledPane text="Typography" expanded="true">
+                    <content>
+                        <GridPane hgap="8" vgap="6">
+                            <columnConstraints>
+                                <ColumnConstraints halignment="RIGHT" minWidth="80" prefWidth="80"/>
+                                <ColumnConstraints halignment="LEFT" hgrow="ALWAYS"/>
+                            </columnConstraints>
 
-            <!-- Background Section -->
-            <TitledPane text="Background" expanded="true">
-                <content>
-                    <VBox spacing="8">
-                        <HBox spacing="12">
+                            <Label text="Font:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+                            <ComboBox fx:id="fontFamilyCombo"
+                                      promptText="Font"
+                                      maxWidth="Infinity"
+                                      GridPane.hgrow="ALWAYS"
+                                      GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+
+                            <Label text="Size:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+                            <Spinner fx:id="fontSizeSpinner"
+                                     editable="true"
+                                     maxWidth="Infinity"
+                                     GridPane.hgrow="ALWAYS"
+                                     GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+
+                            <Label text="Weight:" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+                            <ComboBox fx:id="fontWeightCombo"
+                                      maxWidth="Infinity"
+                                      GridPane.hgrow="ALWAYS"
+                                      GridPane.rowIndex="2" GridPane.columnIndex="1">
+                                <items>
+                                    <FXCollections fx:factory="observableArrayList">
+                                        <String fx:value="LIGHT"/>
+                                        <String fx:value="NORMAL"/>
+                                        <String fx:value="BOLD"/>
+                                        <String fx:value="HEAVY"/>
+                                    </FXCollections>
+                                </items>
+                            </ComboBox>
+
+                            <Label text="Color:" GridPane.rowIndex="3" GridPane.columnIndex="0"/>
+                            <ColorPicker fx:id="textColorPicker"
+                                         maxWidth="Infinity"
+                                         GridPane.hgrow="ALWAYS"
+                                         GridPane.rowIndex="3" GridPane.columnIndex="1"/>
+
+                            <Label text="Border:" GridPane.rowIndex="4" GridPane.columnIndex="0"/>
+                            <ComboBox fx:id="borderWeightCombo"
+                                      maxWidth="Infinity"
+                                      GridPane.hgrow="ALWAYS"
+                                      GridPane.rowIndex="4" GridPane.columnIndex="1">
+                                <items>
+                                    <FXCollections fx:factory="observableArrayList">
+                                        <String fx:value="NONE"/>
+                                        <String fx:value="NORMAL"/>
+                                        <String fx:value="BOLD"/>
+                                        <String fx:value="HEAVY"/>
+                                    </FXCollections>
+                                </items>
+                            </ComboBox>
+
+                            <Label text="Border Color:" GridPane.rowIndex="5" GridPane.columnIndex="0"/>
+                            <ColorPicker fx:id="borderColorPicker"
+                                         maxWidth="Infinity"
+                                         GridPane.hgrow="ALWAYS"
+                                         GridPane.rowIndex="5" GridPane.columnIndex="1"/>
+                        </GridPane>
+                    </content>
+                </TitledPane>
+                <Separator/>
+
+                <TitledPane text="Background" expanded="true">
+                    <content>
+                        <VBox spacing="8">
                             <fx:define>
                                 <ToggleGroup fx:id="bgToggleGroup"/>
                             </fx:define>
-                            <RadioButton fx:id="bgTransparentRadio" text="Transparent" toggleGroup="$bgToggleGroup"
-                                         selected="true"/>
-                            <RadioButton fx:id="bgColorRadio" text="Color" toggleGroup="$bgToggleGroup"/>
-                            <RadioButton fx:id="bgImageRadio" text="Image" toggleGroup="$bgToggleGroup"/>
-                        </HBox>
+                            <GridPane hgap="8" vgap="8">
+                                <columnConstraints>
+                                    <ColumnConstraints minWidth="110" prefWidth="120" halignment="LEFT"/>
+                                    <ColumnConstraints hgrow="ALWAYS"/>
+                                    <ColumnConstraints minWidth="90" prefWidth="100" halignment="LEFT"/>
+                                </columnConstraints>
 
-                        <HBox spacing="8" alignment="CENTER_LEFT">
-                            <Label text="Color:"/>
-                            <ColorPicker fx:id="bgColorPicker"
-                                         style="-fx-color-label-visible: false;"
-                                         disable="true"/>
-                        </HBox>
+                                <RadioButton fx:id="bgTransparentRadio"
+                                             text="Transparent"
+                                             toggleGroup="$bgToggleGroup"
+                                             selected="true"
+                                             GridPane.rowIndex="0"
+                                             GridPane.columnIndex="0"
+                                             GridPane.columnSpan="3"/>
 
-                        <GridPane hgap="6" vgap="6">
-                            <columnConstraints>
-                                <ColumnConstraints minWidth="60" prefWidth="70" halignment="RIGHT"/>
-                                <ColumnConstraints hgrow="ALWAYS"/>
-                                <ColumnConstraints minWidth="70"/>
-                            </columnConstraints>
+                                <RadioButton fx:id="bgColorRadio"
+                                             text="Color"
+                                             toggleGroup="$bgToggleGroup"
+                                             GridPane.rowIndex="1"
+                                             GridPane.columnIndex="0"/>
+                                <ColorPicker fx:id="bgColorPicker"
+                                             disable="true"
+                                             maxWidth="Infinity"
+                                             GridPane.hgrow="ALWAYS"
+                                             GridPane.rowIndex="1"
+                                             GridPane.columnIndex="1"
+                                             GridPane.columnSpan="2"/>
 
-                            <Label text="Image:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
-                            <TextField fx:id="imagePathField"
-                                       promptText="Image URI"
-                                       prefWidth="140"
-                                       disable="true"
-                                       GridPane.rowIndex="0" GridPane.columnIndex="1"/>
-                            <Button fx:id="chooseImageButton"
-                                    text="Browse..."
-                                    disable="true"
-                                    GridPane.rowIndex="0" GridPane.columnIndex="2"/>
-                        </GridPane>
-                    </VBox>
-                </content>
-            </TitledPane>
+                                <RadioButton fx:id="bgImageRadio"
+                                             text="Image"
+                                             toggleGroup="$bgToggleGroup"
+                                             GridPane.rowIndex="2"
+                                             GridPane.columnIndex="0"/>
+                                <TextField fx:id="imagePathField"
+                                           promptText="Image URI"
+                                           disable="true"
+                                           maxWidth="Infinity"
+                                           GridPane.hgrow="ALWAYS"
+                                           GridPane.rowIndex="2"
+                                           GridPane.columnIndex="1"/>
+                                <Button fx:id="chooseImageButton"
+                                        text="Browse..."
+                                        disable="true"
+                                        maxWidth="Infinity"
+                                        GridPane.hgrow="ALWAYS"
+                                        GridPane.rowIndex="2"
+                                        GridPane.columnIndex="2"/>
+                            </GridPane>
+                        </VBox>
+                    </content>
+                </TitledPane>
 
-            <Region VBox.vgrow="ALWAYS"/>
+                <Region VBox.vgrow="ALWAYS"/>
+            </VBox>
+        </GridPane>
+    </center>
 
-        </VBox>
-    </right>
     <padding>
         <Insets top="8" right="8" bottom="8" left="8"/>
     </padding>

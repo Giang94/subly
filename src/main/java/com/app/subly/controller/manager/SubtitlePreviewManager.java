@@ -17,107 +17,152 @@ import javafx.scene.shape.Rectangle;
 
 public class SubtitlePreviewManager {
 
+    public enum PreviewSizingMode {
+        FIXED_ASPECT,   // Original behavior (fixed 16:9 box)
+        FLEX_WIDTH      // Fixed height (3 lines), width grows to fill parent
+    }
+
     private static final double ASPECT_W = 16.0;
     private static final double ASPECT_H = 9.0;
 
     private final StackPane container;
     private final ImageView bgImageView;
-
     private final TextFlow textFlow;
     private final Text textNode;
-
-    // Clip the container to enforce the visible bounds
     private final Rectangle textClip = new Rectangle();
 
-    private boolean sizingConfigured = false;
+    private boolean initialized = false;
+    private PreviewSizingMode sizingMode;
 
-    public SubtitlePreviewManager(StackPane container, ImageView bgImageView, TextFlow textFlow, Text textNode) {
+    public SubtitlePreviewManager(StackPane container,
+                                  ImageView bgImageView,
+                                  TextFlow textFlow,
+                                  Text textNode) {
+        this(container, bgImageView, textFlow, textNode, PreviewSizingMode.FLEX_WIDTH);
+    }
+
+    public SubtitlePreviewManager(StackPane container,
+                                  ImageView bgImageView,
+                                  TextFlow textFlow,
+                                  Text textNode,
+                                  PreviewSizingMode sizingMode) {
         this.container = container;
         this.bgImageView = bgImageView;
         this.textFlow = textFlow;
         this.textNode = textNode;
+        this.sizingMode = (sizingMode == null) ? PreviewSizingMode.FIXED_ASPECT : sizingMode;
+    }
+
+    public void setSizingMode(PreviewSizingMode mode) {
+        if (mode == null || mode == this.sizingMode) return;
+        this.sizingMode = mode;
+        if (initialized) Platform.runLater(this::applySizing);
+    }
+
+    public PreviewSizingMode getSizingMode() {
+        return sizingMode;
     }
 
     public void initialize() {
-        if (sizingConfigured) return;
-        sizingConfigured = true;
+        if (initialized) return;
+        initialized = true;
 
-        // Center the TextFlow node inside the container
         StackPane.setAlignment(textFlow, Pos.CENTER);
         textFlow.setTextAlignment(TextAlignment.CENTER);
-
-        // Ensure the Text is attached
         if (!textFlow.getChildren().contains(textNode)) {
             textFlow.getChildren().setAll(textNode);
         }
-
-        // Clip the container to the fixed preview area
         container.setClip(textClip);
 
-        // Measure a single line accurately and build a safe 3-line height
-        Text oneLine = new Text("Wg");
-
-        Runnable applyHeights = () -> {
-            if (container.getScene() == null) return;
-
-            textFlow.applyCss();
-            textFlow.layout();
-
-            oneLine.setFont(textNode.getFont());
-            double lineHeight = Math.ceil(oneLine.getLayoutBounds().getHeight());
-            double lineSpacing = safe(textFlow.getLineSpacing());
-
-            Insets pad = safeInsets(textFlow.getPadding());
-            double padT = pad.getTop();
-            double padB = pad.getBottom();
-            double padL = pad.getLeft();
-            double padR = pad.getRight();
-
-            // Exactly 3 lines (no extra multiplier)
-            double totalHeight = Math.ceil(lineHeight * 3 + lineSpacing * 2 + padT + padB + 2) * 1.5;
-            double width = Math.ceil((totalHeight * ASPECT_W) / ASPECT_H);
-
-            // Fix preview container size (the visible bounds)
-            fixSize(container, width, totalHeight);
-
-            // TextFlow width is fixed for wrapping; height should be computed from content
-            textFlow.setPrefWidth(width);
-            textFlow.setMinWidth(width);
-            textFlow.setMaxWidth(width);
-
-            // Do NOT force height; let it compute by content so StackPane can center it vertically
-            textFlow.setMinHeight(Region.USE_PREF_SIZE);
-            textFlow.setPrefHeight(Region.USE_COMPUTED_SIZE);
-            textFlow.setMaxHeight(Region.USE_PREF_SIZE);
-
-            // Wrapping width excludes padding
-            double wrap = Math.max(0, width - (padL + padR));
-            textNode.setWrappingWidth(wrap);
-
-            // Update clip to the container bounds
-            textClip.setX(0);
-            textClip.setY(0);
-            textClip.setWidth(width);
-            textClip.setHeight(totalHeight);
-
-            // Refit background to container
-            refitImage();
-        };
-
-        textNode.fontProperty().addListener((o, ov, nv) -> applyHeights.run());
+        textNode.fontProperty().addListener((o, ov, nv) -> applySizing());
         container.sceneProperty().addListener((o, ov, nv) -> {
-            if (nv != null) Platform.runLater(applyHeights);
+            if (nv != null) Platform.runLater(this::applySizing);
         });
 
-        javafx.beans.value.ChangeListener<Number> sizeWatcher = (o, ov, nv) -> refitImage();
-        container.widthProperty().addListener(sizeWatcher);
-        container.heightProperty().addListener(sizeWatcher);
+        container.widthProperty().addListener((o, ov, nv) -> {
+            if (sizingMode == PreviewSizingMode.FLEX_WIDTH) updateWrapping();
+            refitImage();
+        });
+        container.heightProperty().addListener((o, ov, nv) -> refitImage());
 
         container.setBorder(new Border(new BorderStroke(
                 Color.BLACK, BorderStrokeStyle.SOLID, CornerRadii.EMPTY, new BorderWidths(1)))
         );
 
-        Platform.runLater(applyHeights);
+        Platform.runLater(this::applySizing);
+    }
+
+    private void applySizing() {
+        if (container.getScene() == null) return;
+
+        // Clear previous bindings
+        unfixSize(container);
+        textFlow.minWidthProperty().unbind();
+        textFlow.prefWidthProperty().unbind();
+        textFlow.maxWidthProperty().unbind();
+        textClip.widthProperty().unbind();
+
+        textFlow.applyCss();
+        textFlow.layout();
+
+        // Measure single line
+        Text probe = new Text("Wg");
+        probe.setFont(textNode.getFont());
+        double lineHeight = Math.ceil(probe.getLayoutBounds().getHeight());
+        double lineSpacing = safe(textFlow.getLineSpacing());
+        Insets pad = safeInsets(textFlow.getPadding());
+        double padT = pad.getTop();
+        double padB = pad.getBottom();
+
+        // Total height (3 lines) kept same formula as original
+        double totalHeight = Math.ceil(lineHeight * 3 + lineSpacing * 2 + padT + padB + 2) * 1.5;
+
+        if (sizingMode == PreviewSizingMode.FIXED_ASPECT) {
+            // Original mode: fixed 16:9 rectangle
+            double width = Math.ceil((totalHeight * ASPECT_W) / ASPECT_H);
+            fixSize(container, width, totalHeight);
+
+            textFlow.setMinWidth(width);
+            textFlow.setPrefWidth(width);
+            textFlow.setMaxWidth(width);
+            textFlow.setMinHeight(Region.USE_PREF_SIZE);
+            textFlow.setPrefHeight(Region.USE_COMPUTED_SIZE);
+            textFlow.setMaxHeight(Region.USE_PREF_SIZE);
+
+            double wrap = Math.max(0, width - (pad.getLeft() + pad.getRight()));
+            textNode.setWrappingWidth(wrap);
+
+            textClip.setX(0);
+            textClip.setY(0);
+            textClip.setWidth(width);
+            textClip.setHeight(totalHeight);
+        } else {
+            // FLEX_WIDTH: fixed height, width flexible
+            container.setMinHeight(0);
+            container.setPrefHeight(totalHeight);
+            container.setMaxHeight(Double.MAX_VALUE);
+
+            textFlow.setMinWidth(0);
+            textFlow.setPrefWidth(Region.USE_COMPUTED_SIZE);
+            textFlow.setMaxWidth(Double.MAX_VALUE);
+
+            textFlow.setMinHeight(Region.USE_PREF_SIZE);
+            textFlow.setPrefHeight(Region.USE_COMPUTED_SIZE);
+            textFlow.setMaxHeight(totalHeight);
+
+            textClip.setHeight(totalHeight);
+            textClip.widthProperty().bind(container.widthProperty());
+
+            updateWrapping();
+        }
+
+        refitImage();
+    }
+
+    private void updateWrapping() {
+        Insets pad = safeInsets(textFlow.getPadding());
+        double wrap = Math.max(0, container.getWidth() - (pad.getLeft() + pad.getRight()));
+        textNode.setWrappingWidth(wrap);
     }
 
     public void updateAppearance(
@@ -126,29 +171,41 @@ public class SubtitlePreviewManager {
             RadioButton colorRadio,
             RadioButton imageRadio,
             ColorPicker bgColorPicker,
-            TextField imagePathField
-    ) {
-        if (textColor != null) {
-            textNode.setFill(textColor);
-        }
-
-        boolean imageMode = imageRadio != null && imageRadio.isSelected();
-        if (imageMode) {
-            setBackgroundImage(imagePathField != null ? imagePathField.getText() : null);
-            return;
-        } else {
-            bgImageView.setImage(null);
-        }
-
-        Background bg = null;
-        if (transparentRadio != null && transparentRadio.isSelected()) {
-            bg = Background.EMPTY;
-        } else if (colorRadio != null && colorRadio.isSelected()) {
-            if (bgColorPicker != null && bgColorPicker.getValue() != null) {
-                bg = new Background(new BackgroundFill(bgColorPicker.getValue(), CornerRadii.EMPTY, Insets.EMPTY));
+            TextField imagePathField,
+            String borderWeight,
+            Color borderColor,
+            boolean doUpdate) {
+        if (doUpdate) {
+            if (textColor != null) {
+                textNode.setFill(textColor);
             }
+
+            if (borderWeight != null && !borderWeight.equals("None") && borderColor != null) {
+                textNode.setStrokeType(javafx.scene.shape.StrokeType.OUTSIDE);
+                textNode.setStroke(borderColor);
+                textNode.setStrokeWidth(1);
+            } else {
+                textNode.setStrokeWidth(0);
+            }
+
+            boolean imageMode = imageRadio != null && imageRadio.isSelected();
+            if (imageMode) {
+                setBackgroundImage(imagePathField != null ? imagePathField.getText() : null);
+                return;
+            } else if (bgImageView != null) {
+                bgImageView.setImage(null);
+            }
+
+            Background bg = null;
+            if (transparentRadio != null && transparentRadio.isSelected()) {
+                bg = Background.EMPTY;
+            } else if (colorRadio != null && colorRadio.isSelected()) {
+                if (bgColorPicker != null && bgColorPicker.getValue() != null) {
+                    bg = new Background(new BackgroundFill(bgColorPicker.getValue(), CornerRadii.EMPTY, Insets.EMPTY));
+                }
+            }
+            container.setBackground(bg);
         }
-        container.setBackground(bg);
     }
 
     public void setText(String text) {
@@ -156,14 +213,13 @@ public class SubtitlePreviewManager {
     }
 
     private void setBackgroundImage(String uriOrPath) {
+        if (bgImageView == null) return;
         if (uriOrPath == null || uriOrPath.isBlank()) {
             bgImageView.setImage(null);
             return;
         }
-
         Image img = safeLoad(resolveToUri(uriOrPath));
         if (img == null) return;
-
         bgImageView.setImage(img);
         refitImage();
     }
@@ -198,6 +254,19 @@ public class SubtitlePreviewManager {
         r.setMinSize(w, h);
         r.setPrefSize(w, h);
         r.setMaxSize(w, h);
+    }
+
+    private void fixHeight(Region r, double h) {
+        if (h <= 0) return;
+        r.setMinHeight(h);
+        r.setPrefHeight(h);
+        r.setMaxHeight(h);
+    }
+
+    private void unfixSize(Region r) {
+        r.setMinSize(Region.USE_COMPUTED_SIZE, Region.USE_COMPUTED_SIZE);
+        r.setPrefSize(Region.USE_COMPUTED_SIZE, Region.USE_COMPUTED_SIZE);
+        r.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
     }
 
     private String resolveToUri(String path) {

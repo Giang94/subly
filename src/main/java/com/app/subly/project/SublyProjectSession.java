@@ -10,12 +10,16 @@ import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.scene.control.TableView;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
+@Getter
+@Setter
 public class SublyProjectSession {
 
     private java.io.File projectFile;
@@ -30,10 +34,6 @@ public class SublyProjectSession {
     public SublyProjectSession() {
         chapters.addListener((ListChangeListener<Chapter>) c -> markDirty());
         selectedChapterIndex.addListener((o, ov, nv) -> markDirty());
-    }
-
-    public ObservableList<Chapter> getChapters() {
-        return chapters;
     }
 
     public List<Chapter> getEffectiveChapters() {
@@ -157,18 +157,6 @@ public class SublyProjectSession {
         return s;
     }
 
-    public java.io.File getProjectFile() {
-        return projectFile;
-    }
-
-    public void setProjectFile(java.io.File projectFile) {
-        this.projectFile = projectFile;
-    }
-
-    public SublySettings getSettings() {
-        return settings;
-    }
-
     public void setSettings(SublySettings settings) {
         this.settings = settings;
         markDirty();
@@ -182,14 +170,6 @@ public class SublyProjectSession {
 
     public void touch() {
         markDirty();
-    }
-
-    public void setDirtyListener(Consumer<Boolean> l) {
-        this.dirtyListener = l;
-    }
-
-    public boolean isDirty() {
-        return dirty;
     }
 
     public void clearDirty() {
@@ -225,7 +205,9 @@ public class SublyProjectSession {
         if (ch == null || !isPlaceholder(ch)) return false;
 
         // Assign default title
-        ch.setTitle(computeNextChapterTitle());
+        if (ch.getTitle() == null || ch.getTitle().isBlank()) {
+            ch.setTitle(computeNextChapterTitle());
+        }
 
         // Ensure at least one subtitle
         if (ch.getSubtitles().isEmpty()) {

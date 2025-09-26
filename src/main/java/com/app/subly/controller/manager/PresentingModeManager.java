@@ -1,11 +1,13 @@
 package com.app.subly.controller.manager;
 
+import com.app.subly.component.ProjectorRef;
+import com.app.subly.model.Chapter;
 import com.app.subly.model.Subtitle;
 import com.app.subly.project.SublyProjectSession;
 import javafx.application.Platform;
-import javafx.scene.control.Button;
-import javafx.scene.control.TableView;
-import javafx.scene.control.ToggleButton;
+import javafx.scene.control.*;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 
 import java.util.Objects;
 import java.util.function.Consumer;
@@ -17,18 +19,21 @@ public class PresentingModeManager {
     private final Button prevButton;
     private final Button nextButton;
     private final TableView<Subtitle> subtitleTable;
+    private final ListView<Chapter> chapterListView;
 
     private final Supplier<SublyProjectSession> sessionSupplier;
     private final Consumer<Boolean> editingEnabledConsumer;
 
     private PresentingModeNavigator presentingNavigator;
+    private ProjectorRef projectorRef;
 
     public PresentingModeManager(
             ToggleButton presentingModeToggle,
-            Button prevButton,
-            Button nextButton,
+            Button prevButton, Button nextButton,
             TableView<Subtitle> subtitleTable,
+            ListView<Chapter> chapterListView,
             Supplier<SublyProjectSession> sessionSupplier,
+            ProjectorRef projectorRef,
             Consumer<Boolean> editingEnabledConsumer
     ) {
         this.presentingModeToggle = presentingModeToggle;
@@ -37,6 +42,8 @@ public class PresentingModeManager {
         this.subtitleTable = Objects.requireNonNull(subtitleTable);
         this.sessionSupplier = Objects.requireNonNull(sessionSupplier);
         this.editingEnabledConsumer = Objects.requireNonNull(editingEnabledConsumer);
+        this.projectorRef = projectorRef;
+        this.chapterListView = chapterListView;
     }
 
     public void initialize() {
@@ -69,7 +76,8 @@ public class PresentingModeManager {
         if (presentingModeToggle == null) return;
         if (presentingModeToggle.isSelected() == presenting) return;
         presentingModeToggle.setSelected(presenting);
-        if (presenting) startPresentingMode(); else stopPresentingMode();
+        if (presenting) startPresentingMode();
+        else stopPresentingMode();
         updatePresentingButtonText();
     }
 
@@ -92,6 +100,25 @@ public class PresentingModeManager {
     private void startPresentingMode() {
         editingEnabledConsumer.accept(false);
         enablePrevNext();
+
+        if (presentingNavigator == null) {
+            SublyProjectSession session = sessionSupplier.get();
+            if (session != null && session.getChapters() != null && !session.getChapters().isEmpty()) {
+                PresentingModeNavigator.Listener listener = new ProjectorPresenterBridge(
+                        projectorRef.get(),
+                        session.getSettings(),
+                        chapterListView,
+                        subtitleTable
+                );
+                int subtitleRowIndex = subtitleTable.getSelectionModel().getSelectedIndex();
+                int chapterIndex = session.getSelectedChapterIndex();
+                presentingNavigator = new PresentingModeNavigator(session.getChapters(),
+                        chapterIndex, subtitleRowIndex, listener);
+                presentingNavigator.setPresentingMode(true);
+            }
+        } else {
+            presentingNavigator.setPresentingMode(true);
+        }
     }
 
     private void stopPresentingMode() {
@@ -102,7 +129,13 @@ public class PresentingModeManager {
 
     private void updatePresentingButtonText() {
         if (presentingModeToggle == null) return;
-        presentingModeToggle.setText(isPresenting() ? "Presenting" : "Editing");
+        if (isPresenting()) {
+            presentingModeToggle.setText("Presenting");
+            presentingModeToggle.setGraphic(new ImageView(new Image(getClass().getResourceAsStream("/icons/present.png"))));
+        } else {
+            presentingModeToggle.setText("Editing");
+            presentingModeToggle.setGraphic(new ImageView(new Image(getClass().getResourceAsStream("/icons/edit.png"))));
+        }
     }
 
     private void installPrevNextHandlers() {

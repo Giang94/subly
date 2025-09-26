@@ -339,6 +339,15 @@ public class ChapterManager {
                     }
                     e.consume();
                 });
+
+                this.focusedProperty().addListener((o, wasFocused, isNowFocused) -> {
+                    if (!isNowFocused) {
+                        Chapter ch = sessionSupplier.get().getSelectedChapter();
+                        if (ch != null && (ch.getTitle() == null || ch.getTitle().isBlank())) {
+                            ch.setTitle(sessionSupplier.get().computeNextChapterTitle());
+                        }
+                    }
+                });
             }
 
             @Override

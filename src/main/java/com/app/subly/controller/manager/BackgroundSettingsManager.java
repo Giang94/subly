@@ -22,10 +22,15 @@ public class BackgroundSettingsManager {
     private final Button chooseImageButton;
     private final TextField imagePathField;
 
+    // NEW: optional text color picker
+    private ColorPicker textColorPicker;
+    private boolean internalTextColorUpdate = false;
+
     private final Supplier<SublyProjectSession> sessionSupplier;
     private final Supplier<com.app.subly.component.Projector> projectorSupplier;
     private final Runnable markDirty;
     private final Runnable onPreviewBackgroundChanged;
+    private final Runnable onPreviewTextChanged;
 
     public BackgroundSettingsManager(RadioButton bgTransparentRadio,
                                      RadioButton bgColorRadio,
@@ -37,7 +42,8 @@ public class BackgroundSettingsManager {
                                      Supplier<SublyProjectSession> sessionSupplier,
                                      Supplier<com.app.subly.component.Projector> projectorSupplier,
                                      Runnable markDirty,
-                                     Runnable onPreviewBackgroundChanged) {
+                                     Runnable onPreviewBackgroundChanged,
+                                     Runnable onPreviewTextChanged) {
         this.bgTransparentRadio = bgTransparentRadio;
         this.bgColorRadio = bgColorRadio;
         this.bgImageRadio = bgImageRadio;
@@ -49,7 +55,7 @@ public class BackgroundSettingsManager {
         this.projectorSupplier = projectorSupplier;
         this.markDirty = markDirty;
         this.onPreviewBackgroundChanged = onPreviewBackgroundChanged;
-
+        this.onPreviewTextChanged = onPreviewTextChanged;
     }
 
     public void initialize() {
@@ -64,9 +70,7 @@ public class BackgroundSettingsManager {
         imagePathField.disableProperty().bind(bgImageRadio.selectedProperty().not());
 
         chooseImageButton.setOnAction(this::onChooseImage);
-        bgToggleGroup.selectedToggleProperty().addListener((o, ov, nv) -> {
-            applyBackground();
-        });
+        bgToggleGroup.selectedToggleProperty().addListener((o, ov, nv) -> applyBackground());
         bgColorPicker.valueProperty().addListener((o, ov, nv) -> {
             if (bgColorRadio.isSelected()) {
                 applyBackground();
@@ -74,8 +78,28 @@ public class BackgroundSettingsManager {
         });
     }
 
-    public void onSessionSet() {
-        SublyProjectSession s = sessionSupplier.get();
+    public void setTextColorPicker(ColorPicker picker) {
+        this.textColorPicker = picker;
+        if (picker == null) return;
+        picker.valueProperty().addListener((obs, oldC, newC) -> {
+            if (internalTextColorUpdate) return;
+            if (newC == null) return;
+            SublyProjectSession session = sessionSupplier.get();
+            if (session == null) return;
+            String hex = ColorConvertUtils.toHexString(newC);
+            session.update(s -> s.setSubtitleColor(hex));
+            var proj = projectorSupplier.get();
+            if (proj != null) {
+                proj.applySettings(session.getSettings());
+            }
+            markDirty.run();
+            if (onPreviewTextChanged != null) onPreviewTextChanged.run();
+        });
+    }
+
+    public void onSessionSet(SublyProjectSession s) {
+        System.out.println("onSessionSet called, session (BackgroundSettingsManager): " + s.hashCode());
+        System.out.println("imagePathField text (onSessionSet init): " + imagePathField.getText());
         if (s == null) return;
         SublySettings settings = s.getSettings();
         if (settings == null) return;
@@ -89,9 +113,19 @@ public class BackgroundSettingsManager {
             }
             case IMAGE -> {
                 bgImageRadio.setSelected(true);
+                System.out.println("imagePathField (onSessionSet): " + imagePathField.hashCode() + ", uri=" + settings.getProjectorImageUri());
                 if (settings.getProjectorImageUri() != null) {
                     imagePathField.setText(settings.getProjectorImageUri());
                 }
+            }
+        }
+        // NEW: apply saved text color into picker without firing listener
+        if (textColorPicker != null && settings.getSubtitleColor() != null) {
+            try {
+                internalTextColorUpdate = true;
+                textColorPicker.setValue(ColorConvertUtils.toJavaFxColor(settings.getSubtitleColor()));
+            } finally {
+                internalTextColorUpdate = false;
             }
         }
         applyBackground();
@@ -133,10 +167,11 @@ public class BackgroundSettingsManager {
         var proj = projectorSupplier.get();
         if (proj != null) {
             if (bgImageRadio.isSelected()) {
+                System.out.println("imagePathField (on applyBackground): " + imagePathField.hashCode() + ", uri=" + imagePathField.getText());
                 String uri = imagePathField.getText();
-                boolean ok = proj.setBackgroundImage(uri);
+                boolean ok = proj.setBackgroundImage(uri, this.getClass().getSimpleName());
                 if (!ok) {
-                    imagePathField.clear(); // empty string
+                    imagePathField.clear();
                     session.update(s -> s.setProjectorImageUri(null));
                 }
             } else {
@@ -149,8 +184,7 @@ public class BackgroundSettingsManager {
     }
 
     private void firePreviewUpdate() {
-        if (onPreviewBackgroundChanged != null) {
-            onPreviewBackgroundChanged.run();
-        }
+        if (onPreviewBackgroundChanged != null) onPreviewBackgroundChanged.run();
+        if (onPreviewTextChanged != null) onPreviewTextChanged.run();
     }
 }

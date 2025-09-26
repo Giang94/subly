@@ -10,8 +10,12 @@ import java.util.Map;
 
 public class EditingControlLockManager {
 
+    private final ComboBox<String> fontFamilyCombo;
     private final Spinner<Integer> fontSizeSpinner;
     private final ColorPicker textColorPicker;
+    private final ComboBox<String> fontWeightCombo;
+    private final ComboBox<String> borderWeightCombo;
+    private final ColorPicker borderColorPicker;
 
     private final RadioButton bgTransparentRadio;
     private final RadioButton bgColorRadio;
@@ -35,7 +39,9 @@ public class EditingControlLockManager {
     private final Map<MenuItem, EventHandler<ActionEvent>> originalMenuHandlers = new HashMap<>();
 
     public EditingControlLockManager(
-            Spinner<Integer> fontSizeSpinner, ColorPicker textColorPicker,
+            ComboBox<String> fontFamilyCombo, Spinner<Integer> fontSizeSpinner,
+            ColorPicker textColorPicker, ComboBox<String> fontWeightCombo,
+            ComboBox<String> borderWeightCombo, ColorPicker borderColorPicker,
             RadioButton bgTransparentRadio, RadioButton bgColorRadio, ColorPicker bgColorPicker,
             RadioButton bgImageRadio, TextField imagePathField, Button chooseImageButton,
             TableView<?> subtitleTable, ChapterManager chapterManager,
@@ -60,12 +66,20 @@ public class EditingControlLockManager {
         this.moveDownMenuItem = moveDownMenuItem;
         this.undoMenuItem = undoMenuItem;
         this.redoMenuItem = redoMenuItem;
+        this.fontFamilyCombo = fontFamilyCombo;
+        this.fontWeightCombo = fontWeightCombo;
+        this.borderWeightCombo = borderWeightCombo;
+        this.borderColorPicker = borderColorPicker;
     }
 
     public void setEditingEnabled(boolean enabled) {
         // Font / text styling
         safeDisable(fontSizeSpinner, !enabled);
         safeDisable(textColorPicker, !enabled);
+        safeDisable(fontFamilyCombo, !enabled);
+        safeDisable(fontWeightCombo, !enabled);
+        safeDisable(borderWeightCombo, !enabled);
+        safeDisable(borderColorPicker, !enabled);
 
         // Background controls
         safeDisable(bgTransparentRadio, !enabled);

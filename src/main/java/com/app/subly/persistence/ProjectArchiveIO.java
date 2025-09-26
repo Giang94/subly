@@ -58,8 +58,9 @@ final class ProjectArchiveIO {
         deleteRecursive(tmpDir);
     }
 
-    LoadedArchive load(Path archiveFile) throws IOException {
+    <T> LoadedArchive<T> load(Path archiveFile, Class<T> type) throws IOException {
         Objects.requireNonNull(archiveFile, "archiveFile");
+        Objects.requireNonNull(type, "type");
         Path extractRoot = Files.createTempDirectory("subly-unpack-");
         boolean success = false;
         try {
@@ -72,12 +73,10 @@ final class ProjectArchiveIO {
             try (InputStream in = Files.newInputStream(json)) {
                 root = mapper.readTree(in);
             }
-
             rewriteMediaPathsForLoad(root, extractRoot);
-
-            Object project = mapper.treeToValue(root, Object.class);
+            T project = mapper.treeToValue(root, type);
             success = true;
-            return new LoadedArchive(project, extractRoot);
+            return new LoadedArchive<>(project, extractRoot);
         } finally {
             if (!success) {
                 deleteRecursive(extractRoot);
@@ -85,7 +84,11 @@ final class ProjectArchiveIO {
         }
     }
 
-    record LoadedArchive(Object projectModel, Path extractionRoot) {
+    LoadedArchive<Object> load(Path archiveFile) throws IOException {
+        return load(archiveFile, Object.class);
+    }
+
+    record LoadedArchive<T>(T projectModel, Path extractionRoot) {
     }
 
     /* ---------------- Rewrite helpers ---------------- */

@@ -17,8 +17,6 @@ public final class ProjectBuilders {
     }
 
     public static SublyProjectFile fromUi(String fileName,
-                                          ListView<Chapter> chapterList,
-                                          TableView<Subtitle> subtitleTable,
                                           SublyProjectSession session) {
 
         SublyProjectFile project = new SublyProjectFile();
@@ -29,9 +27,10 @@ public final class ProjectBuilders {
             if (settings != null) project.setSettings(settings);
         }
 
+        List<Chapter> chapterList = session != null ? session.getEffectiveChapters() : null;
         List<Chapter> chapters = new ArrayList<>();
-        if (chapterList != null && chapterList.getItems() != null && !chapterList.getItems().isEmpty()) {
-            for (Chapter source : chapterList.getItems()) {
+        if (chapterList != null && !chapterList.isEmpty()) {
+            for (Chapter source : chapterList) {
                 Chapter copy = new Chapter();
                 copy.setId(source.getId());
                 copy.setIndex(source.getIndex());
@@ -41,14 +40,15 @@ public final class ProjectBuilders {
                 copy.setSubtitles(subs);
                 chapters.add(copy);
             }
-        } else if (subtitleTable != null && subtitleTable.getItems() != null) {
-            // Fallback: single chapter from table
-            Chapter ch = new Chapter();
-            ch.setIndex(1);
-            ch.setTitle("Chapter 1");
-            ch.getSubtitles().addAll(subtitleTable.getItems());
-            chapters.add(ch);
         }
+//        else if (subtitleTable != null && subtitleTable.getItems() != null) {
+//            // Fallback: single chapter from table
+//            Chapter ch = new Chapter();
+//            ch.setIndex(1);
+//            ch.setTitle("Chapter 1");
+//            ch.getSubtitles().addAll(subtitleTable.getItems());
+//            chapters.add(ch);
+//        }
 
         project.setChapters(chapters);
         project.normalize();

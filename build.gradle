@@ -31,7 +31,7 @@ application {
 
 javafx {
     version = '21.0.5'   // keep in sync with your JDK
-    modules = ['javafx.controls', 'javafx.fxml']
+    modules = ['javafx.controls', 'javafx.fxml', 'javafx.graphics', 'javafx.base']
 }
 
 dependencies {
@@ -52,11 +52,37 @@ test {
     useJUnitPlatform()
 }
 
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = 21 // match JDK; change to 17 if using 17
+}
+
 jlink {
-    imageZip = project.file("${buildDir}/distributions/app-${javafx.platform.classifier}.zip")
-    options = ['--strip-debug', '--compress', '2', '--no-header-files', '--no-man-pages']
+    options = ['--strip-debug', '--compress', 'zip-6', '--no-header-files', '--no-man-pages']
     launcher {
-        name = 'app'
+        name = 'Subly'
+    }
+    addExtraDependencies('javafx')
+    jpackage {
+        installerType = 'exe'
+        appVersion = project.version.toString()
+        vendor = 'Subly'
+        icon = file('src/main/resources/images/app-icon.png').exists() ? file('src/main/resources/images/app-icon.png').absolutePath : null
+        installerOptions = [
+                '--win-per-user-install',
+                '--win-dir-chooser',
+                '--win-menu',
+                '--win-menu-group', 'Subly',
+                '--win-shortcut'
+        ]
+    }
+}
+
+tasks.register('printDistInfo') {
+    dependsOn 'jpackage'
+    doLast {
+        println "\nExecutable installer: build/jpackage/Subly-" + project.version + ".exe"
+        println "Portable runtime image (no installer): build/image/"
     }
 }
 

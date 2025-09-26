@@ -2,10 +2,7 @@ package com.app.subly.component;
 
 import com.app.subly.model.Chapter;
 import com.app.subly.model.SublySettings;
-import com.app.subly.model.Subtitle;
-import com.app.subly.model.enums.FontWeight;
 import com.app.subly.utils.DialogHelper;
-import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Parent;
@@ -16,7 +13,6 @@ import javafx.scene.image.ImageView;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
-import javafx.scene.text.Text;
 import javafx.scene.text.TextAlignment;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
@@ -114,56 +110,63 @@ public class Projector {
     }
 
     public void setBackgroundColor(Color color) {
-        // Clear any image first
-        layout.setBackground(null);
-        String rgb = String.format("rgb(%d, %d, %d)",
-                (int) (color.getRed() * 255),
-                (int) (color.getGreen() * 255),
-                (int) (color.getBlue() * 255));
-        stage.getScene().getRoot().setStyle("-fx-background-color: " + rgb + ";");
-        stage.getScene().setFill(Color.rgb(0, 0, 0, 1.0));
+        layout.getChildren().removeIf(node -> node instanceof ImageView);
+        layout.setStyle("");
+        stage.getScene().setFill(Color.TRANSPARENT);
+        layout.setBackground(
+                new javafx.scene.layout.Background(
+                        new javafx.scene.layout.BackgroundFill(
+                                color, null, null
+                        )
+                )
+        );
     }
 
-    public boolean setBackgroundImage(String uriOrPath) {
+    public boolean setBackgroundImage(String uriOrPath, String caller) {
+        System.out.println("[" + caller + "] Setting background image: " + uriOrPath);
         if (uriOrPath == null || uriOrPath.isBlank()) {
             layout.getChildren().removeIf(node -> node instanceof ImageView);
-            return true; // treated as cleared
+            return true;
         }
 
-        String uri = uriOrPath;
-        if (!uri.matches("^[a-zA-Z][a-zA-Z0-9+.-]*:.*")) {
-            java.io.File f = new java.io.File(uri);
-            if (f.exists()) uri = f.toURI().toString();
-        }
+        java.io.File f = new java.io.File(uriOrPath);
+        if (f.exists()) {
+            String uri = f.toURI().toString();
+            Image image;
+            try {
+                image = new Image(uri, false);
+            } catch (Exception ex) {
+                System.out.println("Failed to load image: " + ex.getMessage());
+                DialogHelper.showImageLoadFailure(stage, uri);
+                return false;
+            }
 
-        Image image;
-        try {
-            image = new Image(uri, false);
-        } catch (Exception ex) {
-            DialogHelper.showImageLoadFailure(stage, uri);
+            if (image.isError() || image.getWidth() <= 0 || image.getHeight() <= 0) {
+                System.out.println("Failed to load error image: " + image.getException());
+                DialogHelper.showImageLoadFailure(stage, uri);
+                return false;
+            }
+
+            layout.getChildren().removeIf(ImageView.class::isInstance);
+
+            ImageView bgView = new ImageView(image);
+            bgView.setPreserveRatio(true);
+            bgView.setSmooth(true);
+            bgView.setCache(true);
+
+            stage.getScene().widthProperty().addListener((obs, o, n) -> resizeCover(bgView, image));
+            stage.getScene().heightProperty().addListener((obs, o, n) -> resizeCover(bgView, image));
+            resizeCover(bgView, image);
+
+            layout.getChildren().addFirst(bgView);
+            layout.setBackground(null);
+            layout.setStyle("-fx-background-color: transparent;");
+            return true;
+        } else {
+            System.out.println("File does not exist: " + uriOrPath);
+            DialogHelper.showImageLoadFailure(stage, uriOrPath);
             return false;
         }
-
-        if (image.isError() || image.getWidth() <= 0 || image.getHeight() <= 0) {
-            DialogHelper.showImageLoadFailure(stage, uri);
-            return false;
-        }
-
-        layout.getChildren().removeIf(ImageView.class::isInstance);
-
-        ImageView bgView = new ImageView(image);
-        bgView.setPreserveRatio(true);
-        bgView.setSmooth(true);
-        bgView.setCache(true);
-
-        stage.getScene().widthProperty().addListener((obs, o, n) -> resizeCover(bgView, image));
-        stage.getScene().heightProperty().addListener((obs, o, n) -> resizeCover(bgView, image));
-        resizeCover(bgView, image);
-
-        layout.getChildren().addFirst(bgView);
-        layout.setBackground(null);
-        layout.setStyle("-fx-background-color: transparent;");
-        return true;
     }
 
     private void resizeCover(ImageView bgView, Image image) {
@@ -188,7 +191,7 @@ public class Projector {
         switch (settings.getBackgroundType()) {
             case TRANSPARENT -> setTransparentBackground();
             case SOLID_COLOR -> setBackgroundColor(Color.web(settings.getProjectorColor()));
-            case IMAGE -> setBackgroundImage(settings.getProjectorImageUri());
+            case IMAGE -> setBackgroundImage(settings.getProjectorImageUri(), this.getClass().getSimpleName());
         }
     }
 
@@ -201,7 +204,6 @@ public class Projector {
                 mapFxWeight(settings.getFontWeight()),
                 settings.getSubtitleFontSize()
         );
-        System.out.println("Projector font: " + fxFont.getName() + ", size=" + fxFont.getSize());
         label.setFont(fxFont);
 
         StringBuilder style = new StringBuilder()
@@ -224,29 +226,5 @@ public class Projector {
         }
 
         label.setStyle(style.toString());
-    }
-
-    public void show(SublySettings settings, int chapterIndex, int rowIndex) {
-        if (settings == null) return;
-        if (!stage.isShowing()) stage.show();
-
-        // Apply global (only) settings
-        applySettings(settings);
-
-        String text = "";
-        if (chapters != null &&
-                chapterIndex >= 0 && chapterIndex < chapters.size()) {
-
-            Chapter ch = chapters.get(chapterIndex);
-            List<Subtitle> rows = ch.getSubtitles();
-            if (rowIndex >= 0 && rowIndex < rows.size()) {
-                Subtitle row = rows.get(rowIndex);
-                text = (row.getPrimaryText() == null) ? "" : row.getPrimaryText();
-            }
-        }
-
-        currentChapterIndex = chapterIndex;
-        currentRowIndex = rowIndex;
-        setText(text);
     }
 }

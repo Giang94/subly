@@ -2,6 +2,8 @@ package com.app.subly.controller.manager;
 
 import com.app.subly.SublyApplication;
 import com.app.subly.component.EditHistory;
+import com.app.subly.component.SublySettingsDefaults;
+import com.app.subly.controller.ControlPanelController;
 import com.app.subly.model.Subtitle;
 import com.app.subly.persistence.ProjectBuilders;
 import com.app.subly.persistence.SublyProjectIO;
@@ -40,6 +42,8 @@ public class ProjectFileManager {
     private final java.util.function.Consumer<Boolean> dirtySetter;
     private final Supplier<Boolean> dirtyFlagSupplier;
 
+    private final ControlPanelController controller;
+
     public ProjectFileManager(MenuItem newMenuItem,
                               MenuItem openMenuItem,
                               MenuItem saveMenuItem,
@@ -52,7 +56,8 @@ public class ProjectFileManager {
                               Supplier<SublyApplication> appSupplier,
                               SubtitleTableManager subtitleManager,
                               java.util.function.Consumer<Boolean> dirtySetter,
-                              Supplier<Boolean> dirtyFlagSupplier) {
+                              Supplier<Boolean> dirtyFlagSupplier,
+                              ControlPanelController controller) {
         this.newMenuItem = newMenuItem;
         this.openMenuItem = openMenuItem;
         this.saveMenuItem = saveMenuItem;
@@ -66,6 +71,7 @@ public class ProjectFileManager {
         this.subtitleManager = subtitleManager;
         this.dirtySetter = dirtySetter;
         this.dirtyFlagSupplier = dirtyFlagSupplier;
+        this.controller = controller;
     }
 
     public void initialize() {
@@ -137,30 +143,34 @@ public class ProjectFileManager {
             return;
         FileChooser chooser = new FileChooser();
         chooser.setTitle("Open Project");
-        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Subly Project (*" + PROJECT_EXT + ")", "*" + PROJECT_EXT));
+        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Subly Project (*.subly)", "*.subly"));
         File selected = chooser.showOpenDialog(new Stage());
         if (selected == null) return;
         try {
-            Object project = SublyProjectIO.load(selected.toPath());
+            var project = SublyProjectIO.load(selected.toPath(), com.app.subly.model.SublyProjectFile.class);
             SublyProjectSession session = sessionSupplier.get();
-            if (session != null) {
+            if (session != null && project != null) {
                 session.setProjectFile(selected);
-                // ProjectBuilders + session population stays as-is
-                if (project instanceof com.app.subly.model.SublyProjectFile p) {
-                    if (p.getSettings() != null) {
-                        appSupplier.get().updateSetting(p.getSettings());
-                        session.setSettings(p.getSettings());
-                    }
-                    session.replaceAllChapters(p.getChapters());
-                    if (!session.getChapters().isEmpty()) {
-                        session.ensureAllChapterIds();
-                        session.setSelectedChapterIndex(0);
-                        subtitleManager.reloadSubtitles(session.getChapters().get(0).getSubtitles());
-                    } else {
-                        subtitleManager.reloadSubtitles(java.util.List.of(new Subtitle(1, "", "")));
-                    }
-                    appSupplier.get().updateTitle(p.getFileName());
+                if (project.getSettings() != null) {
+                    SublySettingsDefaults.apply(project.getSettings());
+                    appSupplier.get().updateSetting(project.getSettings());
+                    session.setSettings(project.getSettings());
                 }
+                session.replaceAllChapters(project.getChapters());
+                if (!session.getChapters().isEmpty()) {
+                    session.ensureAllChapterIds();
+                    session.setSelectedChapterIndex(0);
+                    subtitleManager.reloadSubtitles(session.getChapters().getFirst().getSubtitles());
+                } else {
+                    subtitleManager.reloadSubtitles(java.util.List.of(new Subtitle(1, "", "")));
+                }
+                if (controller != null) {
+                    controller.applySettingsToFormattingTools(project.getSettings());
+                    System.out.println("ProjectFileManager: setSession called on controller with session " + session.hashCode());
+                    System.out.println("Photo URI in settings: " + project.getSettings().getProjectorImageUri());
+                    controller.setSession(session);
+                }
+                appSupplier.get().updateTitle(project.getFileName());
                 session.clearDirty();
                 dirtySetter.accept(false);
                 refreshActions();
@@ -180,7 +190,7 @@ public class ProjectFileManager {
             saveProjectAs();
             return;
         }
-        var project = ProjectBuilders.fromUi(target.getName(), null, subtitleManager.getTable(), session);
+        var project = ProjectBuilders.fromUi(target.getName(), session);
         try {
             SublyProjectIO.save(project, target.toPath());
             appSupplier.get().updateTitle(project.getFileName());
@@ -214,7 +224,7 @@ public class ProjectFileManager {
         }
         session.setProjectFile(chosen);
         subtitleManager.syncCurrentChapterToModel();
-        var project = ProjectBuilders.fromUi(chosen.getName(), null, subtitleManager.getTable(), session);
+        var project = ProjectBuilders.fromUi(chosen.getName(), session);
         try {
             SublyProjectIO.save(project, chosen.toPath());
             appSupplier.get().updateTitle(project.getFileName());

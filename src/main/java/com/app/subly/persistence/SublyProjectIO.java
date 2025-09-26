@@ -18,7 +18,6 @@ public final class SublyProjectIO {
 
     private static final ObjectMapper MAPPER;
     private static final ProjectArchiveIO ARCHIVER;
-    // Track extraction roots so caller can cleanup if desired
     private static final Map<Path, Path> EXTRACTIONS = new ConcurrentHashMap<>();
 
     static {
@@ -45,19 +44,21 @@ public final class SublyProjectIO {
      * (not a zip), it is read directly (backward compatibility).
      */
     public static <T> T load(Path file) throws IOException {
+        return load(file, (Class<T>) Object.class);
+    }
+
+    public static <T> T load(Path file, Class<T> type) throws IOException {
         Objects.requireNonNull(file, "file");
+        Objects.requireNonNull(type, "type");
         if (!Files.isRegularFile(file)) {
             throw new IOException("File not found: " + file);
         }
         if (isZip(file)) {
-            var loaded = ARCHIVER.load(file);
+            var loaded = ARCHIVER.load(file, type);
             EXTRACTIONS.put(file.toAbsolutePath(), loaded.extractionRoot());
-            @SuppressWarnings("unchecked")
-            T cast = (T) loaded.projectModel();
-            return cast;
+            return loaded.projectModel();
         } else {
-            // Legacy JSON fallback
-            return MAPPER.readValue(Files.readAllBytes(file), (Class<T>) Object.class);
+            return MAPPER.readValue(Files.readAllBytes(file), type);
         }
     }
 

@@ -16,6 +16,7 @@ public final class DialogHelper {
                                  String title,
                                  String header,
                                  String message) {
+        System.out.println("Showing error dialog: " + message);
         runFx(() -> {
             Alert alert = new Alert(Alert.AlertType.ERROR);
             if (owner != null) alert.initOwner(owner);

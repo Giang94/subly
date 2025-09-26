@@ -7,6 +7,8 @@ import lombok.*;
 
 import java.io.Serializable;
 
+import static com.app.subly.persistence.AppSettingsIO.*;
+
 @Getter
 @Setter
 @Data
@@ -14,17 +16,16 @@ import java.io.Serializable;
 @NoArgsConstructor
 public class SublySettings implements Serializable {
 
-    private BackgroundType backgroundType = BackgroundType.TRANSPARENT;
-    private boolean projectorTransparent = true;
-    private String projectorColor = "ffffff";
     private String projectorImageUri;
+    private BackgroundType backgroundType = DEFAULT_BACKGROUND_TYPE;
+    private String projectorColor = DEFAULT_PROJECTOR_COLOR;
 
-    private String subtitleFontFamily = "Arial";
-    private String subtitleColor = "000000";
-    private Integer subtitleFontSize = 48;
-    private FontWeight fontWeight = FontWeight.NORMAL;
-    private BorderWeight subtitleBorderWeight = BorderWeight.NORMAL;
-    private String subtitleBorderColor = "000000";
+    private String subtitleFontFamily = DEFAULT_SUBTITLE_FONT_FAMILY;
+    private String subtitleColor = DEFAULT_SUBTITLE_COLOR;
+    private Integer subtitleFontSize = DEFAULT_SUBTITLE_FONT_SIZE;
+    private FontWeight fontWeight = DEFAULT_FONT_WEIGHT;
+    private BorderWeight subtitleBorderWeight = DEFAULT_SUBTITLE_BORDER_WEIGHT;
+    private String subtitleBorderColor = DEFAULT_SUBTITLE_BORDER_COLOR;
 
     public String getSubtitleBorderColor() {
         return tidyUpColorCode(subtitleBorderColor);

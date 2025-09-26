@@ -46,4 +46,14 @@ public class ColorConvertUtils {
         if (o >= 1.0) return String.format("rgb(%d,%d,%d)", r, g, b);
         return String.format("rgba(%d,%d,%d,%.3f)", r, g, b, o);
     }
+
+    public static Color safeColor(String hex) {
+        if (hex == null || hex.isBlank()) return null;
+        try {
+            return Color.web(hex);
+        } catch (Exception e) {
+            return Color.BLACK;
+        }
+    }
 }
+

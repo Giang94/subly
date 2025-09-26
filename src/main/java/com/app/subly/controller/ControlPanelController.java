@@ -6,8 +6,12 @@ import com.app.subly.component.ProjectorRef;
 import com.app.subly.component.StyleToolbarBinder;
 import com.app.subly.controller.manager.*;
 import com.app.subly.model.Chapter;
+import com.app.subly.model.SublySettings;
 import com.app.subly.model.Subtitle;
+import com.app.subly.model.enums.BackgroundType;
 import com.app.subly.project.SublyProjectSession;
+import com.app.subly.utils.ColorConvertUtils;
+import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.fxml.FXML;
@@ -159,7 +163,7 @@ public class ControlPanelController {
         // Core managers
         subtitleManager = new SubtitleTableManager(
                 subtitleTable, indexColumn, primaryTextColumn, secondaryTextColumn,
-                currentSubtitleText, prevButton, nextButton,
+                currentSubtitleText, prevButton, nextButton, chapterListView,
                 this::markDirty,
                 projectorRef::get,
                 () -> session
@@ -178,7 +182,7 @@ public class ControlPanelController {
                 bgTransparentRadio, bgColorRadio, bgImageRadio, bgToggleGroup,
                 bgColorPicker, chooseImageButton, imagePathField,
                 () -> session, projectorRef::get, this::markDirty,
-                this::onBackgroundChanged
+                this::onBackgroundChanged, this::onTextChanged
         );
 
         projectFileManager = new ProjectFileManager(
@@ -189,7 +193,8 @@ public class ControlPanelController {
                 () -> app,
                 subtitleManager,
                 this::setDirty,
-                () -> dirty.get()
+                () -> dirty.get(),
+                this
         );
 
         previewManager = new SubtitlePreviewManager(
@@ -201,8 +206,12 @@ public class ControlPanelController {
 
         // Extracted controllers
         editingControlLockManager = new EditingControlLockManager(
-                fontSizeSpinner, textColorPicker,
-                bgTransparentRadio, bgColorRadio, bgColorPicker, bgImageRadio, imagePathField, chooseImageButton,
+                fontFamilyCombo, fontSizeSpinner,
+                textColorPicker, fontWeightCombo,
+                borderWeightCombo, borderColorPicker,
+                bgTransparentRadio,
+                bgColorRadio, bgColorPicker,
+                bgImageRadio, imagePathField, chooseImageButton,
                 subtitleTable, chapterManager,
                 addChapterMenuItem, renameChapterMenuItem, deleteChapterMenuItem, moveUpMenuItem, moveDownMenuItem,
                 undoMenuItem, redoMenuItem
@@ -210,9 +219,9 @@ public class ControlPanelController {
 
         presentingModeManager = new PresentingModeManager(
                 presentingModeToggle, prevButton, nextButton,
-                subtitleTable,
-                () -> session,
+                subtitleTable, chapterListView, () -> session, projectorRef,
                 enabled -> editingControlLockManager.setEditingEnabled(enabled)
+
         );
 
         showScreenToggleManager = new ShowScreenToggleManager(
@@ -243,6 +252,7 @@ public class ControlPanelController {
 
         if (textColorPicker != null) {
             textColorPicker.setValue(sessionTextColor());
+            backgroundManager.setTextColorPicker(textColorPicker);
         }
         updatePreviewAppearance();
     }
@@ -257,10 +267,11 @@ public class ControlPanelController {
 
     public void setSession(SublyProjectSession session) {
         this.session = session;
+
         chapterManager.onSessionSet();
         subtitleManager.onSessionSet();
         styleBinder.rebind(session, projectorRef.get());
-        backgroundManager.onSessionSet();
+        backgroundManager.onSessionSet(session);
         projectFileManager.refreshActions();
         presentingModeManager.onSessionSet();
 
@@ -289,14 +300,17 @@ public class ControlPanelController {
 
     private void updatePreviewAppearance() {
         if (previewManager == null) return;
-        Color txt = textColorPicker != null ? textColorPicker.getValue() : Color.web(DEFAULT_SUBTITLE_COLOR);
+        Color textColor = textColorPicker != null ? textColorPicker.getValue() : Color.web(DEFAULT_SUBTITLE_COLOR);
         previewManager.updateAppearance(
-                txt,
+                textColor,
                 bgTransparentRadio,
                 bgColorRadio,
                 bgImageRadio,
                 bgColorPicker,
-                imagePathField
+                imagePathField,
+                borderWeightCombo.getSelectionModel().getSelectedItem(),
+                borderColorPicker.getValue(),
+                false
         );
     }
 
@@ -338,5 +352,70 @@ public class ControlPanelController {
 
     public void onBackgroundChanged() {
         updatePreviewAppearance();
+    }
+
+    public void onTextChanged() {
+        updatePreviewAppearance();
+    }
+
+    public void applySettingsToFormattingTools(SublySettings settings) {
+        System.out.println("Calling applySettingsToFormattingTools()");
+        if (settings == null) return;
+        Platform.runLater(() -> {
+            // Font family
+            if (settings.getSubtitleFontFamily() != null) {
+                ensureItemSelected(fontFamilyCombo, settings.getSubtitleFontFamily());
+            }
+            // Font size
+            if (fontSizeSpinner != null && fontSizeSpinner.getValueFactory() != null) {
+                fontSizeSpinner.getValueFactory().setValue((int) settings.getSubtitleFontSize());
+            }
+            // Font weight
+            if (settings.getFontWeight() != null) {
+                ensureItemSelected(fontWeightCombo, settings.getFontWeight().name());
+            }
+            // Text color
+            Color textColor = ColorConvertUtils.safeColor(settings.getSubtitleColor());
+            if (textColor != null) {
+                textColorPicker.setValue(textColor);
+            }
+            // Border weight
+            if (settings.getSubtitleBorderWeight() != null) {
+                ensureItemSelected(borderWeightCombo, settings.getSubtitleBorderWeight().name());
+            }
+            // Border color
+            Color borderColor = ColorConvertUtils.safeColor(settings.getSubtitleBorderColor());
+            if (borderColor != null) {
+                borderColorPicker.setValue(borderColor);
+            }
+
+            // Background
+            BackgroundType bgType = settings.getBackgroundType();
+            if (bgType == null) bgType = BackgroundType.TRANSPARENT;
+
+            switch (bgType) {
+                case TRANSPARENT -> bgTransparentRadio.setSelected(true);
+                case SOLID_COLOR -> {
+                    bgColorRadio.setSelected(true);
+                    if (settings.getProjectorColor() != null) {
+                        bgColorPicker.setValue(ColorConvertUtils.toJavaFxColor(settings.getProjectorColor()));
+                    }
+                }
+                case IMAGE -> {
+                    bgImageRadio.setSelected(true);
+                    if (settings.getProjectorImageUri() != null) {
+                        imagePathField.setText(settings.getProjectorImageUri());
+                    }
+                }
+            }
+        });
+    }
+
+    private void ensureItemSelected(ComboBox<String> combo, String value) {
+        if (value == null) return;
+        if (combo.getItems().stream().noneMatch(v -> v.equalsIgnoreCase(value))) {
+            combo.getItems().add(value);
+        }
+        combo.getSelectionModel().select(value);
     }
 }

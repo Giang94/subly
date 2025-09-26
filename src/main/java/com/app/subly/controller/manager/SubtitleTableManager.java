@@ -1,9 +1,6 @@
 package com.app.subly.controller.manager;
 
-import com.app.subly.component.EditHistory;
-import com.app.subly.component.MultilineTableCell;
-import com.app.subly.component.RowIndexer;
-import com.app.subly.component.TrailingBlankRowPolicy;
+import com.app.subly.component.*;
 import com.app.subly.model.Chapter;
 import com.app.subly.model.Subtitle;
 import com.app.subly.project.SublyProjectSession;
@@ -11,6 +8,7 @@ import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.control.Button;
+import javafx.scene.control.ListView;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.input.KeyCode;
@@ -21,6 +19,7 @@ import javafx.scene.text.Text;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.function.Supplier;
 
 public class SubtitleTableManager {
 
@@ -32,8 +31,9 @@ public class SubtitleTableManager {
     private final Button prevButton;
     private final Button nextButton;
     private final Runnable markDirty;
-    private final java.util.function.Supplier<com.app.subly.component.Projector> projectorSupplier;
-    private final java.util.function.Supplier<SublyProjectSession> sessionSupplier;
+    private final ListView<Chapter> chapterListView;
+    private final Supplier<Projector> projectorSupplier;
+    private final Supplier<SublyProjectSession> sessionSupplier;
 
     private final TrailingBlankRowPolicy trailingBlank = new TrailingBlankRowPolicy();
     private EditHistory history;
@@ -46,6 +46,7 @@ public class SubtitleTableManager {
                                 Text currentSubtitleText,
                                 Button prevButton,
                                 Button nextButton,
+                                ListView<Chapter> chapterListView,
                                 Runnable markDirty,
                                 java.util.function.Supplier<com.app.subly.component.Projector> projectorSupplier,
                                 java.util.function.Supplier<SublyProjectSession> sessionSupplier) {
@@ -59,6 +60,7 @@ public class SubtitleTableManager {
         this.markDirty = markDirty;
         this.projectorSupplier = projectorSupplier;
         this.sessionSupplier = sessionSupplier;
+        this.chapterListView = chapterListView;
     }
 
     public void initialize() {
@@ -323,7 +325,7 @@ public class SubtitleTableManager {
         if (sess == null) return;
         Chapter ch = sess.getSelectedChapter();
         if (ch != null && sess.promotePlaceholderForSubtitleEdit()) {
-            // chapter list will refresh via ChapterManager
+            chapterListView.refresh();
         }
     }
 
