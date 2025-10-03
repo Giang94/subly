@@ -196,37 +196,58 @@ public class ChapterManager {
     }
 
     private void deleteChapter() {
+        // Prevent deletion if chapter structure is locked
         if (chapterStructureLocked) return;
+
+        // Get the current project session
         SublyProjectSession session = sessionSupplier.get();
         if (session == null) return;
+
+        // Get the selected chapter index
         int idx = chapterListView.getSelectionModel().getSelectedIndex();
         if (idx < 0) return;
+
+        // Get the selected chapter object
         Chapter ch = session.getSelectedChapter();
+        // Abort if no chapter is selected or if it's a placeholder
         if (ch == null || isPlaceholder(ch)) return;
 
+        // Sync any subtitle edits to the model before deletion
         subtitleManager.syncCurrentChapterToModel();
+
+        // Remove the selected chapter
         session.getChapters().remove(idx);
+
+        // Count remaining real chapters
         long realCount = session.getChapters().stream().filter(c -> !isPlaceholder(c)).count();
+
+        // If no real chapters remain, create a default chapter
         if (realCount == 0) {
             Chapter fresh = new Chapter();
             fresh.setTitle("Chapter 1");
             fresh.getSubtitles().add(new Subtitle(1, "", ""));
             session.getChapters().add(0, fresh);
             idx = 0;
-        }
-        session.ensurePlaceholderChapter();
-        int newIndex = Math.min(idx, session.getChapters().size() - 1);
-        if (newIndex >= 0) {
-            chapterListView.getSelectionModel().select(newIndex);
-            session.setSelectedChapterIndex(newIndex);
         } else {
-            session.setSelectedChapterIndex(-1);
+            // Move selection to the previous chapter (above)
+            idx = Math.max(0, idx - 1);
         }
+
+        // Ensure a placeholder chapter exists
+        session.ensurePlaceholderChapter();
+
+        // Select the new chapter
+        chapterListView.getSelectionModel().select(idx);
+        session.setSelectedChapterIndex(idx);
+
+        // Reload subtitles for the newly selected chapter if it's not a placeholder
         Chapter newCh = session.getSelectedChapter();
         if (newCh != null && !isPlaceholder(newCh)) {
             if (newCh.getSubtitles().isEmpty()) newCh.getSubtitles().add(new Subtitle(1, "", ""));
             subtitleManager.reloadSubtitles(newCh.getSubtitles());
         }
+
+        // Refresh UI and update state
         chapterListView.refresh();
         updateContextMenuState();
         session.touch();
